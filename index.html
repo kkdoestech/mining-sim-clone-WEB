@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MINING GM - Idle Mining Simulator</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Mobile-First App Shell (Centered viewport container max 480px) -->
+  <div id="app-container">
+
+    <!-- Top Header: Player profile, Level, Title, Currency Bar & XP -->
+    <header class="app-header">
+      <div class="header-top-row">
+        <div class="player-info">
+          <div class="player-avatar">⛏️</div>
+          <div class="player-meta">
+            <span class="player-name" id="player-name">MinerGM</span>
+            <span class="badge badge-level" id="player-level-badge">Lv. 1</span>
+          </div>
+        </div>
+        <div class="game-brand">
+          <span class="brand-title">MINING GM</span>
+        </div>
+      </div>
+
+      <!-- Currency Bar -->
+      <div class="currency-bar">
+        <div class="currency-pill gold-pill" title="Gold Coins">
+          <span class="currency-icon">🪙</span>
+          <span class="currency-amount" id="player-coins">100</span>
+        </div>
+        <div class="currency-pill gem-pill" title="Precious Gems">
+          <span class="currency-icon">💎</span>
+          <span class="currency-amount" id="player-gems">5</span>
+        </div>
+      </div>
+
+      <!-- Player XP Progress Bar -->
+      <div class="player-xp-wrap" title="Player Level Experience">
+        <div class="player-xp-header">
+          <span class="xp-label">EXP</span>
+          <span class="xp-text" id="player-xp-text">0 / 100 XP</span>
+        </div>
+        <div class="player-xp-track">
+          <div class="player-xp-fill" id="player-xp-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area: Dynamically rendered views -->
+    <main id="mines-container">
+
+      <!-- 1. Mines View (2D Tycoon Quarry Arena) -->
+      <section id="view-mines" class="app-view active">
+        <div class="section-title-wrap">
+          <div class="section-title-group">
+            <h2 class="section-title">Quarry & Extraction</h2>
+            <span class="section-count" id="mines-status-count">3 Stations • 2 Workers</span>
+          </div>
+          <button type="button" class="btn-hire-miner" id="hire-miner-btn" data-action="hire-miner" title="Recruit another autonomous miner">
+            <span class="hire-icon">👷‍♂️</span>
+            <div class="hire-meta">
+              <span class="hire-title">Hire Worker</span>
+              <span class="hire-cost" id="hire-miner-cost">🪙 100</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Interactive 2D Cross-Section Arena (Cat Snack Bar Tycoon Style) -->
+        <div id="mine-stage">
+
+          <!-- Dedicated Juice Layer for Floating Text & Particles -->
+          <div id="juice-container" class="juice-layer" aria-hidden="true"></div>
+
+          <!-- Absolute Worker Movement Layer -->
+          <div id="workers-container" aria-label="Animated Miner Agents">
+            <!-- Miner 1: Actively digging at Station 1 -->
+            <div class="animated-miner miner-working" id="miner-agent-1" style="left: 175px; top: 156px;">
+              <div class="miner-bubble">⛏️</div>
+              <div class="miner-sprite">👷‍♂️</div>
+              <div class="miner-shadow"></div>
+            </div>
+            <!-- Miner 2: Hauling extracted ore up towards the Surface Cart -->
+            <div class="animated-miner miner-hauling" id="miner-agent-2" style="left: 70px; top: 76px;">
+              <div class="miner-backpack-badge">🪨 x3</div>
+              <div class="miner-sprite">🧌</div>
+              <div class="miner-shadow"></div>
+            </div>
+          </div>
+
+          <!-- Top Surface Zone: Merchant Cart (Sell Station), Coin Chest, Capacity Display -->
+          <div id="surface-zone">
+            <div class="surface-grass-ledge"></div>
+
+            <div class="surface-interactive-row">
+              <!-- Merchant Cart (Sell Station) -->
+              <div class="merchant-cart-station" id="merchant-cart-station" title="Merchant Cart - Sell Station">
+                <div class="cart-visual">
+                  <span class="cart-canopy">⛺</span>
+                  <span class="cart-body">🛒</span>
+                  <span class="merchant-npc">🧓</span>
+                </div>
+                <div class="cart-info">
+                  <span class="cart-label">Merchant Cart</span>
+                  <button type="button" class="btn-cart-sell" id="quick-sell-btn" data-action="sell-all-ores">
+                    <span>Sell Ores</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Visual Coin Chest & Capacity Display -->
+              <div class="surface-vault-station">
+                <div class="coin-chest-box" title="Camp Treasury Chest">
+                  <span class="chest-icon">🪙</span>
+                  <div class="chest-meta">
+                    <span class="chest-label">Vault</span>
+                    <span class="chest-coins" id="surface-coins-val">100</span>
+                  </div>
+                </div>
+
+                <div class="capacity-indicator-pill" id="surface-capacity-pill" title="Backpack Storage">
+                  <span class="capacity-icon">🎒</span>
+                  <div class="capacity-meta">
+                    <span class="capacity-label">Pack</span>
+                    <span class="capacity-text" id="surface-capacity-text">0 / 20</span>
+                  </div>
+                  <div class="capacity-mini-bar">
+                    <div class="capacity-mini-fill" id="surface-capacity-fill" style="width: 0%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Middle/Bottom Underground Zone: Vertical Ladder Rails & 3 Horizontal Station Platforms -->
+          <div id="underground-zone">
+            <!-- Vertical Ladder Rails spanning the quarry shaft -->
+            <div class="ladder-shaft">
+              <div class="ladder-rail left-rail"></div>
+              <div class="ladder-rungs"></div>
+              <div class="ladder-rail right-rail"></div>
+            </div>
+
+            <!-- Station 1: Dirt & Coal Node (Unlocked by default) -->
+            <div class="station-platform station-unlocked" id="station-1" data-station-id="dirt_coal">
+              <div class="platform-ground"></div>
+              <div class="station-left-col">
+                <!-- Ore Node with HP bar directly above it -->
+                <div class="ore-node-wrapper">
+                  <div class="node-hp-bar">
+                    <div class="node-hp-fill" id="hp-fill-station-1" style="width: 100%;"></div>
+                    <span class="node-hp-text" id="hp-text-station-1">20/20 HP</span>
+                  </div>
+                  <div class="ore-node-rock node-dirt-coal chip-damage" id="rock-station-1" title="Dirt & Coal Node">
+                    <span class="rock-icon">🪨</span>
+                    <span class="ore-sparkle">✨</span>
+                  </div>
+                </div>
+                <div class="station-identity">
+                  <h3 class="station-title">Dirt & Coal Node</h3>
+                  <span class="station-tier-tag">Layer 1 • Shallow</span>
+                </div>
+              </div>
+
+              <!-- Defined worker spot where miners stand while digging -->
+              <div class="worker-designated-spot" id="worker-spot-station-1" title="Worker Digging Spot">
+                <div class="spot-marker-ring"></div>
+                <span class="spot-label">Dig Spot</span>
+              </div>
+
+              <!-- Level Up / Speed Up upgrade button showing current level and cost -->
+              <div class="station-actions-col">
+                <button type="button" class="btn-station-upgrade" id="upgrade-btn-station-1" data-action="upgrade-station" data-station="station-1">
+                  <div class="upgrade-btn-main">
+                    <span class="upgrade-action-text">Level Up</span>
+                    <span class="upgrade-level-badge" id="level-badge-station-1">Lv. 1</span>
+                  </div>
+                  <div class="upgrade-cost-tag">
+                    <span class="cost-coin-icon">🪙</span>
+                    <span class="cost-amount" id="cost-station-1">11</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Station 2: Copper Node (Unlock cost: 250 coins) -->
+            <div class="station-platform station-locked" id="station-2" data-station-id="copper">
+              <div class="platform-ground"></div>
+              <div class="station-left-col">
+                <!-- Ore Node with HP bar directly above it -->
+                <div class="ore-node-wrapper">
+                  <div class="node-hp-bar">
+                    <div class="node-hp-fill node-copper-fill" id="hp-fill-station-2" style="width: 100%;"></div>
+                    <span class="node-hp-text" id="hp-text-station-2">80/80 HP</span>
+                  </div>
+                  <div class="ore-node-rock node-copper" id="rock-station-2" title="Copper Node">
+                    <span class="rock-icon">🧱</span>
+                    <span class="ore-sparkle">✨</span>
+                  </div>
+                </div>
+                <div class="station-identity">
+                  <h3 class="station-title">Copper Node</h3>
+                  <span class="station-tier-tag">Layer 2 • Subterranean</span>
+                </div>
+              </div>
+
+              <!-- Defined worker spot where miners stand while digging -->
+              <div class="worker-designated-spot" id="worker-spot-station-2" title="Worker Digging Spot">
+                <div class="spot-marker-ring"></div>
+                <span class="spot-label">Dig Spot</span>
+              </div>
+
+              <!-- Unlock button (Unlock cost: 250 coins) -->
+              <div class="station-actions-col">
+                <button type="button" class="btn-station-unlock" id="unlock-btn-station-2" data-action="unlock-station" data-station="station-2" data-cost="250">
+                  <div class="unlock-btn-main">
+                    <span class="unlock-icon">🔒</span>
+                    <span class="unlock-text">Unlock</span>
+                  </div>
+                  <div class="upgrade-cost-tag">
+                    <span class="cost-coin-icon">🪙</span>
+                    <span class="cost-amount">250</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Station 3: Gold Node (Unlock cost: 1,500 coins) -->
+            <div class="station-platform station-locked" id="station-3" data-station-id="gold">
+              <div class="platform-ground"></div>
+              <div class="station-left-col">
+                <!-- Ore Node with HP bar directly above it -->
+                <div class="ore-node-wrapper">
+                  <div class="node-hp-bar">
+                    <div class="node-hp-fill node-gold-fill" id="hp-fill-station-3" style="width: 100%;"></div>
+                    <span class="node-hp-text" id="hp-text-station-3">300/300 HP</span>
+                  </div>
+                  <div class="ore-node-rock node-gold" id="rock-station-3" title="Gold Node">
+                    <span class="rock-icon">🪙</span>
+                    <span class="ore-sparkle">✨</span>
+                  </div>
+                </div>
+                <div class="station-identity">
+                  <h3 class="station-title">Gold Node</h3>
+                  <span class="station-tier-tag">Layer 3 • Deep Core</span>
+                </div>
+              </div>
+
+              <!-- Defined worker spot where miners stand while digging -->
+              <div class="worker-designated-spot" id="worker-spot-station-3" title="Worker Digging Spot">
+                <div class="spot-marker-ring"></div>
+                <span class="spot-label">Dig Spot</span>
+              </div>
+
+              <!-- Unlock button (Unlock cost: 1,500 coins) -->
+              <div class="station-actions-col">
+                <button type="button" class="btn-station-unlock" id="unlock-btn-station-3" data-action="unlock-station" data-station="station-3" data-cost="1500">
+                  <div class="unlock-btn-main">
+                    <span class="unlock-icon">🔒</span>
+                    <span class="unlock-text">Unlock</span>
+                  </div>
+                  <div class="upgrade-cost-tag">
+                    <span class="cost-coin-icon">🪙</span>
+                    <span class="cost-amount">1,500</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+          </div><!-- /#underground-zone -->
+
+        </div><!-- /#mine-stage -->
+      </section>
+
+      <!-- 2. Backpack / Inventory View -->
+      <section id="view-backpack" class="app-view hidden">
+        <div class="section-title-wrap">
+          <h2 class="section-title">Backpack & Storage</h2>
+        </div>
+        <div id="backpack-content-wrap">
+          <!-- Rendered dynamically by ui.renderBackpack() -->
+        </div>
+      </section>
+
+      <!-- 3. Upgrades Shop View -->
+      <section id="view-shop" class="app-view hidden">
+        <div class="section-title-wrap">
+          <h2 class="section-title">Upgrades & Equipment</h2>
+        </div>
+        <div id="shop-content-wrap">
+          <!-- Rendered dynamically by ui.renderShop() -->
+        </div>
+      </section>
+
+      <!-- 4. Forge View (Placeholder) -->
+      <section id="view-forge" class="app-view hidden">
+        <div class="section-title-wrap">
+          <h2 class="section-title">Equipment Forge</h2>
+        </div>
+        <div class="empty-view-panel">
+          <span class="empty-view-icon">🔨</span>
+          <h3 class="empty-view-title">The Forge</h3>
+          <p class="empty-view-text">Smelt extracted ores and fuse relics to craft high-tier automated machinery. Available in upcoming expansion!</p>
+        </div>
+      </section>
+
+      <!-- 5. Settings View -->
+      <section id="view-settings" class="app-view hidden">
+        <div class="section-title-wrap">
+          <h2 class="section-title">System Settings</h2>
+        </div>
+        <div class="empty-view-panel">
+          <span class="empty-view-icon">⚙️</span>
+          <h3 class="empty-view-title">Settings & Audio</h3>
+          <p class="empty-view-text">Configure audio SFX, background tick simulations, cloud saves, and UI scaling.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Miner Selection Bottom-Sheet Modal -->
+    <div id="miner-modal-overlay" class="modal-overlay hidden" aria-hidden="true">
+      <div class="modal-backdrop" id="modal-backdrop"></div>
+      <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-drag-handle"></div>
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3 id="modal-title" class="modal-title">Assign Miner</h3>
+            <p id="modal-subtitle" class="modal-subtitle">Choose an available worker</p>
+          </div>
+          <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="Close modal">&times;</button>
+        </div>
+        <div id="modal-miners-list" class="modal-miners-list">
+          <!-- Dynamically populated unassigned miners -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Offline Progress Welcoming Modal -->
+    <div id="offline-modal-overlay" class="modal-overlay hidden" aria-hidden="true">
+      <div class="modal-backdrop" id="offline-modal-backdrop"></div>
+      <div class="modal-sheet offline-modal-sheet" role="dialog" aria-modal="true" aria-labelledby="offline-modal-title">
+        <div class="modal-drag-handle"></div>
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3 id="offline-modal-title" class="modal-title">⛏️ Welcome Back, Miner!</h3>
+            <p id="offline-modal-subtitle" class="modal-subtitle">Your team worked hard while you were away</p>
+          </div>
+        </div>
+        <div id="offline-modal-body" class="offline-modal-body">
+          <!-- Dynamically populated offline summary -->
+        </div>
+        <button type="button" class="btn btn-claim-offline" id="offline-claim-btn">
+          <span>🪙 Claim Rewards</span>
+        </button>
+      </div>
+    </div>
+
+
+    <!-- Bottom Navigation Bar (Fixed within #app-container) -->
+    <nav class="bottom-nav" aria-label="Primary Navigation">
+      <a href="#mines" class="nav-item active" data-nav-target="mines">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="14 2 18 6 7 17 3 17 3 13 14 2"></polygon>
+          <line x1="3" y1="22" x2="21" y2="22"></line>
+        </svg>
+        <span class="nav-label">Mines</span>
+      </a>
+
+      <a href="#backpack" class="nav-item" data-nav-target="backpack">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 20h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3V4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"></path>
+          <line x1="9" y1="2" x2="9" y2="6"></line>
+          <line x1="15" y1="2" x2="15" y2="6"></line>
+        </svg>
+        <span class="nav-label">Backpack</span>
+      </a>
+
+      <a href="#shop" class="nav-item" data-nav-target="shop">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        <span class="nav-label">Shop</span>
+      </a>
+
+      <a href="#forge" class="nav-item" data-nav-target="forge">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+        </svg>
+        <span class="nav-label">Forge</span>
+      </a>
+
+      <a href="#settings" class="nav-item" data-nav-target="settings">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span class="nav-label">Settings</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <!-- Entry Script -->
+  <script type="module" src="js/main.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,2474 @@
+/* ==========================================================================
+   MINING GM - Modern Dark-Themed RPG Stylesheet
+   Inspired by FWOG GM Dark RPG Aesthetic
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. CSS Variables & Design Tokens
+   -------------------------------------------------------------------------- */
+:root {
+  /* Core Color Palette */
+  --bg-color: #0e1015;
+  --card-bg: #161922;
+  --card-bg-elevated: #1c212e;
+  --card-border: #242a38;
+  --card-border-highlight: #333d52;
+
+  /* Accent Colors */
+  --accent-blue: #2d70f6;
+  --accent-blue-glow: rgba(45, 112, 246, 0.4);
+  --accent-gold: #f5a623;
+  --accent-gold-glow: rgba(245, 166, 35, 0.35);
+  --accent-green: #10b981;
+  --accent-green-glow: rgba(16, 185, 129, 0.4);
+  --accent-red: #ef4444;
+  --accent-red-hover: #dc2626;
+  --accent-red-glow: rgba(239, 68, 68, 0.4);
+
+  /* Typography Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #8a92a6;
+  --text-muted: #576075;
+
+  /* UI Tokens */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-active: 0 0 16px rgba(45, 112, 246, 0.2);
+  --nav-height: 64px;
+  --header-height: 110px;
+
+  /* Fonts */
+  --font-family-base: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   2. Modern Reset & Base Setup
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  background-color: #08090c;
+  color: var(--text-primary);
+  font-family: var(--font-family-base);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   3. Responsive Layout Container (Mobile-First Shell)
+   Centered on screen up to 480px width to emulate a native mobile app view
+   -------------------------------------------------------------------------- */
+#app-container {
+  max-width: 480px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background-color: var(--bg-color);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.85);
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* --------------------------------------------------------------------------
+   4. Header & Currency Bar
+   Sticky top layout using flexbox to distribute user info and currencies
+   -------------------------------------------------------------------------- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(14, 16, 21, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--card-border);
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Player Info with Avatar & Level Badge */
+.player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.player-avatar {
+  width: 38px;
+  height: 38px;
+  background: var(--card-bg-elevated);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.player-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+
+/* Game Title Branding */
+.game-brand {
+  display: flex;
+  align-items: center;
+}
+
+.brand-title {
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: 1.5px;
+  background: linear-gradient(135deg, #ffffff 40%, var(--accent-gold) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-transform: uppercase;
+}
+
+/* Currency Bar: Horizontally aligned resource pills */
+.currency-bar {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.currency-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.currency-pill:hover {
+  border-color: var(--card-border-highlight);
+  transform: translateY(-1px);
+}
+
+.currency-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.currency-amount {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.gold-pill .currency-amount {
+  color: var(--accent-gold);
+}
+
+.gem-pill .currency-amount {
+  color: #60a5fa;
+}
+
+/* Player Level XP Progress Bar */
+.player-xp-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.player-xp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.xp-label {
+  font-weight: 700;
+  color: var(--accent-blue);
+  letter-spacing: 0.5px;
+}
+
+.xp-text {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.player-xp-track {
+  width: 100%;
+  height: 5px;
+  background-color: #0c0e14;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.player-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: var(--radius-pill);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 6px rgba(96, 165, 250, 0.5);
+}
+
+
+/* --------------------------------------------------------------------------
+   5. Badges & Pills
+   -------------------------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  line-height: 1.3;
+}
+
+.badge-level {
+  background: rgba(45, 112, 246, 0.15);
+  border: 1px solid rgba(45, 112, 246, 0.4);
+  color: #60a5fa;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  width: fit-content;
+}
+
+.badge-rec-level {
+  background: rgba(245, 166, 35, 0.15);
+  border: 1px solid rgba(245, 166, 35, 0.4);
+  color: var(--accent-gold);
+}
+
+.badge-locked {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+/* --------------------------------------------------------------------------
+   6. Main Content Area & Section Headers
+   -------------------------------------------------------------------------- */
+#mines-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 16px calc(var(--nav-height) + 24px); /* bottom padding clears fixed nav */
+  overflow-y: auto;
+}
+
+.section-title-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+}
+
+.section-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   7. Mine Card Component (Active & Locked Mockups)
+   Card anatomy: Header -> Miner Slots -> Progress/Message -> Action Footer
+   -------------------------------------------------------------------------- */
+.mine-card {
+  position: relative;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Subtle top glow highlight on active card */
+.mine-card.active-mine {
+  border-color: rgba(45, 112, 246, 0.4);
+  box-shadow: var(--shadow-card), var(--shadow-active);
+}
+
+.mine-card.active-mine::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-gold));
+}
+
+/* Locked card background styling with blur & dimmed overlay */
+.mine-card.locked-mine {
+  border-color: var(--card-border);
+  background: linear-gradient(180deg, #13151c 0%, #101217 100%);
+  opacity: 0.92;
+}
+
+.locked-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(138, 146, 166, 0.06), transparent 70%);
+  pointer-events: none;
+}
+
+/* Card Header */
+.mine-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mine-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mine-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+
+.mine-depth {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* --------------------------------------------------------------------------
+   8. Miner Slots Section
+   Even horizontal grid for assigning/viewing miner team
+   -------------------------------------------------------------------------- */
+.miner-slots-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slots-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.slots-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mining-rate-badge {
+  font-weight: 700;
+  color: var(--accent-gold);
+  background: rgba(245, 166, 35, 0.1);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+}
+
+/* 4 Horizontal Slots Grid */
+.miner-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.miner-slot {
+  aspect-ratio: 1 / 1;
+  background-color: #11131a;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+/* Filled Slot */
+.miner-slot.filled {
+  background: linear-gradient(180deg, #1b202d 0%, #141722 100%);
+  border-color: #3b465e;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.miner-avatar {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.slot-badge {
+  position: absolute;
+  bottom: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* Miner Slot Remove Trigger */
+.slot-remove-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #ffffff;
+  border: 1.5px solid #161922;
+  font-size: 0.65rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  line-height: 1;
+}
+
+.slot-remove-btn:hover {
+  background: #dc2626;
+  transform: scale(1.15);
+}
+
+
+/* Empty Slot */
+.miner-slot.empty {
+  border: 1px dashed #3a4254;
+  background-color: rgba(22, 25, 34, 0.4);
+  cursor: pointer;
+}
+
+.miner-slot.empty:hover {
+  border-color: var(--accent-blue);
+  background-color: rgba(45, 112, 246, 0.08);
+  transform: translateY(-2px);
+}
+
+.slot-add-icon {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  font-weight: 300;
+  transition: color 0.2s ease;
+}
+
+.miner-slot.empty:hover .slot-add-icon {
+  color: var(--accent-blue);
+}
+
+/* Locked Slot */
+.miner-slot.locked {
+  background-color: rgba(14, 16, 21, 0.6);
+  border-color: rgba(36, 42, 56, 0.6);
+  opacity: 0.6;
+}
+
+.slot-lock-icon {
+  font-size: 1.1rem;
+  opacity: 0.5;
+}
+
+/* --------------------------------------------------------------------------
+   9. Active Mining Progress Bar & Pulse Animation
+   -------------------------------------------------------------------------- */
+.mine-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.progress-status {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.progress-percentage {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-track {
+  width: 100%;
+  height: 10px;
+  background-color: #0b0c10;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  position: relative;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+}
+
+/* Glowing Pulse & Shimmer Keyframes */
+.pulsing-progress {
+  animation: pulseBarGlow 2s infinite ease-in-out;
+}
+
+.progress-fill .progress-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerSweep 2.2s infinite linear;
+}
+
+@keyframes pulseBarGlow {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.8), inset 0 1px 3px rgba(255, 255, 255, 0.6);
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   10. Locked Card Message Box
+   -------------------------------------------------------------------------- */
+.locked-message-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(14, 16, 21, 0.7);
+  border: 1px dashed var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.lock-big-icon {
+  font-size: 1.4rem;
+  opacity: 0.75;
+}
+
+.lock-requirement-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+/* --------------------------------------------------------------------------
+   11. Buttons & Interactive Elements
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+/* Danger / Stop Mining Button (Red / Orange Theme) */
+.btn-danger-action {
+  background: linear-gradient(135deg, var(--accent-red) 0%, #d97706 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px var(--accent-red-glow);
+}
+
+.btn-danger-action:hover {
+  background: linear-gradient(135deg, var(--accent-red-hover) 0%, #b45309 100%);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-danger-action:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+
+/* Start Mining Button (Green Theme) */
+.btn-start-action {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.btn-start-action:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-start-action:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+
+.btn-icon {
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Disabled Button State */
+.btn-disabled {
+  background-color: #1e222d;
+  color: var(--text-muted);
+  border: 1px solid var(--card-border);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* --------------------------------------------------------------------------
+   12. Bottom Navigation Bar
+   Fixed to bottom of #app-container using fixed positioning bounded to 480px
+   -------------------------------------------------------------------------- */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: var(--nav-height);
+  background: rgba(18, 21, 29, 0.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+  z-index: 100;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-decoration: none;
+  color: var(--text-secondary);
+  height: 100%;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+  transition: transform 0.2s ease, stroke 0.2s ease;
+}
+
+.nav-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.nav-item:hover {
+  color: var(--text-primary);
+}
+
+.nav-item:hover .nav-icon {
+  transform: translateY(-2px);
+}
+
+/* Active Nav State */
+.nav-item.active {
+  color: var(--accent-blue);
+}
+
+.nav-item.active .nav-icon {
+  stroke: var(--accent-blue);
+}
+
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 16px;
+  height: 3px;
+  background-color: var(--accent-blue);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 8px var(--accent-blue);
+}
+
+/* --------------------------------------------------------------------------
+   13. Utility Classes & Responsiveness
+   -------------------------------------------------------------------------- */
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   14. Bottom-Sheet Miner Selection Modal
+   -------------------------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.modal-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background-color: #151821;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  border-top: 1px solid var(--card-border-highlight);
+  border-left: 1px solid var(--card-border);
+  border-right: 1px solid var(--card-border);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
+  padding: 12px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 75vh;
+  transform: translateY(0);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 210;
+}
+
+.modal-overlay.hidden .modal-sheet {
+  transform: translateY(100%);
+}
+
+.modal-drag-handle {
+  width: 40px;
+  height: 4px;
+  background-color: #3b4254;
+  border-radius: var(--radius-pill);
+  margin: 0 auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.modal-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.modal-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease;
+}
+
+.modal-close-btn:hover {
+  color: var(--text-primary);
+}
+
+/* Modal Miners List */
+.modal-miners-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 50vh;
+  padding-right: 2px;
+}
+
+.modal-miner-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  gap: 12px;
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.modal-miner-card:hover {
+  border-color: var(--accent-blue);
+  transform: translateX(2px);
+}
+
+.modal-miner-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-miner-avatar {
+  font-size: 1.8rem;
+  width: 42px;
+  height: 42px;
+  background: #10121a;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-miner-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modal-miner-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.modal-miner-stats {
+  font-size: 0.72rem;
+  color: var(--accent-gold);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modal-miner-tier {
+  color: var(--text-secondary);
+}
+
+.btn-assign-miner {
+  width: auto;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  background-color: var(--accent-blue);
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-assign-miner:hover {
+  background-color: #1d4ed8;
+}
+
+.modal-empty-state {
+  text-align: center;
+  padding: 24px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.modal-empty-icon {
+  font-size: 2rem;
+  opacity: 0.6;
+}
+
+.modal-empty-text {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   15. View Switcher & Screen Layouts
+   -------------------------------------------------------------------------- */
+.app-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: fadeInView 0.2s ease;
+}
+
+.app-view.hidden {
+  display: none !important;
+}
+
+@keyframes fadeInView {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   16. Floating Coin Earned Indicator
+   -------------------------------------------------------------------------- */
+.coin-float-indicator {
+  position: fixed;
+  top: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--accent-gold);
+  font-weight: 800;
+  font-size: 1.05rem;
+  background: rgba(22, 25, 34, 0.95);
+  border: 1px solid var(--accent-gold);
+  border-radius: var(--radius-pill);
+  padding: 6px 18px;
+  box-shadow: 0 4px 20px rgba(245, 166, 35, 0.4);
+  pointer-events: none;
+  z-index: 300;
+  animation: coinFloatUp 1.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes coinFloatUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 15px) scale(0.9);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.05);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -24px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -45px) scale(0.95);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   17. Backpack / Inventory View Styles
+   -------------------------------------------------------------------------- */
+.inventory-summary-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-title {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.summary-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--accent-gold);
+}
+
+.btn-sell-all {
+  background: linear-gradient(135deg, var(--accent-gold) 0%, #d97706 100%);
+  color: #11131a;
+  font-weight: 800;
+  box-shadow: 0 4px 14px var(--accent-gold-glow);
+}
+
+.btn-sell-all:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%);
+  transform: translateY(-1px);
+}
+
+.btn-sell-all:disabled {
+  background: #1e222d;
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Ore Cards Grid */
+.inventory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ore-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  gap: 12px;
+  transition: border-color 0.2s ease;
+}
+
+.ore-item-card:hover {
+  border-color: var(--card-border-highlight);
+}
+
+.ore-info-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ore-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ore-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ore-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ore-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.badge-rarity {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+}
+
+.rarity-common {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.rarity-rare {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.rarity-epic {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.rarity-legendary {
+  background: rgba(245, 166, 35, 0.15);
+  color: var(--accent-gold);
+  border: 1px solid rgba(245, 166, 35, 0.4);
+}
+
+.ore-pricing {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.ore-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ore-count-badge {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-sell-single {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  background-color: var(--card-bg-elevated);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sell-single:hover:not(:disabled) {
+  background-color: rgba(245, 166, 35, 0.15);
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.btn-sell-single:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   18. Upgrades / Shop View Styles
+   -------------------------------------------------------------------------- */
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upgrade-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease;
+}
+
+.upgrade-card:hover {
+  border-color: var(--card-border-highlight);
+}
+
+.upgrade-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.upgrade-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.upgrade-icon {
+  font-size: 1.6rem;
+  width: 40px;
+  height: 40px;
+  background: var(--card-bg-elevated);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upgrade-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.upgrade-tier-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(45, 112, 246, 0.15);
+  border: 1px solid rgba(45, 112, 246, 0.4);
+  color: #60a5fa;
+}
+
+.upgrade-tier-badge.max-tier {
+  background: rgba(245, 166, 35, 0.15);
+  border-color: rgba(245, 166, 35, 0.4);
+  color: var(--accent-gold);
+}
+
+.upgrade-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.upgrade-effects-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(14, 16, 21, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.75rem;
+}
+
+.effect-current {
+  color: var(--text-secondary);
+}
+
+.effect-next {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.btn-buy-upgrade {
+  background: linear-gradient(135deg, var(--accent-blue) 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px var(--accent-blue-glow);
+}
+
+.btn-buy-upgrade:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  transform: translateY(-1px);
+}
+
+.btn-buy-upgrade:disabled {
+  background: #1e222d;
+  color: var(--text-muted);
+  box-shadow: none;
+  border: 1px solid var(--card-border);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Empty Panel Views (Forge & Settings) */
+.empty-view-panel {
+  background: var(--card-bg);
+  border: 1px dashed var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 36px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.empty-view-icon {
+  font-size: 2.5rem;
+  opacity: 0.8;
+}
+
+.empty-view-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.empty-view-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   19. Offline Progress Welcoming Modal
+   -------------------------------------------------------------------------- */
+.offline-modal-sheet {
+  background: #141722;
+  border-top: 2px solid var(--accent-gold);
+}
+
+.offline-time-banner {
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #fbbf24;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.offline-time-banner strong {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.offline-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+.offline-loot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.offline-loot-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.offline-loot-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.offline-loot-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.offline-loot-amount {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--accent-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-claim-offline {
+  background: linear-gradient(135deg, var(--accent-gold) 0%, #d97706 100%);
+  color: #11131a;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 12px 20px;
+  box-shadow: 0 4px 16px var(--accent-gold-glow);
+  width: 100%;
+}
+
+.btn-claim-offline:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%);
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   20. 2D Interactive Tycoon Quarry Arena (#mine-stage)
+   Inspired by the Station-and-Worker layout of Cat Snack Bar
+   -------------------------------------------------------------------------- */
+#mine-stage {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 2px solid #2d3345;
+  background-color: #1a181e;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), inset 0 0 50px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  min-height: 480px;
+}
+
+/* --------------------------------------------------------------------------
+   20.1 Surface Zone: Grassy Overworld with Merchant Cart & Storage
+   -------------------------------------------------------------------------- */
+#surface-zone {
+  position: relative;
+  width: 100%;
+  background: linear-gradient(180deg, #1b381a 0%, #295526 28%, #422919 68%, #2e1c12 100%);
+  padding: 14px 14px 18px;
+  border-bottom: 4px solid #140d09;
+  z-index: 10;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* Lush grass ledge trim at very top */
+.surface-grass-ledge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #22c55e 0%, #4ade80 50%, #16a34a 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(34, 197, 94, 0.4);
+}
+
+.surface-interactive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+/* Merchant Cart (Sell Station) */
+.merchant-cart-station {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(18, 15, 22, 0.85);
+  border: 1.5px solid rgba(245, 166, 35, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.merchant-cart-station:hover {
+  border-color: var(--accent-gold);
+  transform: translateY(-1px);
+}
+
+.cart-visual {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  animation: cartBob 3s infinite ease-in-out;
+}
+
+.cart-canopy {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.cart-body {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.merchant-npc {
+  font-size: 1.3rem;
+  line-height: 1;
+  margin-left: 2px;
+}
+
+.cart-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cart-label {
+  font-weight: 800;
+  font-size: 0.7rem;
+  color: var(--accent-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.btn-cart-sell {
+  background: linear-gradient(135deg, var(--accent-gold) 0%, #d97706 100%);
+  color: #11131a;
+  font-weight: 800;
+  font-size: 0.72rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(245, 166, 35, 0.4);
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-cart-sell:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%);
+  transform: scale(1.04);
+}
+
+.btn-cart-sell:active {
+  transform: scale(0.98);
+}
+
+/* Surface Vault & Capacity Meters */
+.surface-vault-station {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.coin-chest-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 16, 21, 0.9);
+  border: 1px solid rgba(245, 166, 35, 0.35);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.chest-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.chest-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chest-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.chest-coins {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--accent-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.capacity-indicator-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 16, 21, 0.9);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-pill);
+  padding: 3px 8px;
+}
+
+.capacity-icon {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.capacity-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.capacity-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.capacity-text {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  font-variant-numeric: tabular-nums;
+}
+
+.capacity-mini-bar {
+  width: 32px;
+  height: 5px;
+  background-color: #0b0c10;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.capacity-mini-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #2563eb);
+  border-radius: var(--radius-pill);
+  transition: width 0.3s ease;
+}
+
+/* --------------------------------------------------------------------------
+   20.2 Underground Zone: Bedrock Strata, Vertical Ladders & Station Platforms
+   -------------------------------------------------------------------------- */
+#underground-zone {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 14px 22px;
+  background-color: #1a181e;
+  background-image:
+    linear-gradient(180deg, rgba(34, 30, 40, 0.6) 0%, rgba(20, 18, 25, 0.85) 50%, rgba(12, 10, 15, 0.98) 100%),
+    repeating-linear-gradient(180deg, transparent, transparent 38px, rgba(255, 255, 255, 0.015) 38px, rgba(255, 255, 255, 0.015) 40px);
+}
+
+/* Vertical Wooden Ladder Shaft linking surface down to bottom stations */
+.ladder-shaft {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 18px;
+  width: 26px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ladder-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, #a66a35 0%, #6e411c 100%);
+  border-radius: 2px;
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.ladder-rail.left-rail {
+  left: 0;
+}
+
+.ladder-rail.right-rail {
+  right: 0;
+}
+
+.ladder-rungs {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  right: 4px;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent,
+    transparent 14px,
+    #8b5a2b 14px,
+    #8b5a2b 17px,
+    #4a2e15 17px,
+    #4a2e15 18px
+  );
+}
+
+/* Station Platforms (Offset to the right of ladder) */
+.station-platform {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(28, 25, 34, 0.88);
+  border: 1.5px solid #363045;
+  border-radius: var(--radius-md);
+  padding: 12px 14px 16px;
+  margin-left: 36px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  z-index: 10;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.station-platform.station-unlocked {
+  border-color: rgba(45, 112, 246, 0.4);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 12px rgba(45, 112, 246, 0.12);
+}
+
+.station-platform.station-locked {
+  background: rgba(18, 16, 22, 0.75);
+  border-color: rgba(48, 43, 58, 0.7);
+  opacity: 0.88;
+}
+
+/* Solid bedrock platform footing */
+.platform-ground {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #3d3548, #2a2533);
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
+  border-top: 1px solid #4f465d;
+}
+
+.station-left-col {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Ore Node with HP Bar Directly Above */
+.ore-node-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.node-hp-bar {
+  width: 58px;
+  height: 8px;
+  background-color: #0b0c10;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-pill);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.node-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: var(--radius-pill);
+  transition: width 0.25s ease;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.node-copper-fill {
+  background: linear-gradient(90deg, #d97706, #f59e0b);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+.node-gold-fill {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+.node-hp-text {
+  position: absolute;
+  inset: 0;
+  font-size: 0.52rem;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 1px 2px #000;
+  line-height: 1;
+}
+
+/* Rock Ore Node Visual */
+.ore-node-rock {
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(circle at 35% 35%, #383244 0%, #1c1924 100%);
+  border: 2px solid #504860;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), inset 0 2px 2px rgba(255, 255, 255, 0.1);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.ore-node-rock:hover {
+  transform: scale(1.05);
+}
+
+.ore-node-rock:active {
+  transform: scale(0.95);
+}
+
+.node-dirt-coal {
+  border-color: #6b5847;
+  box-shadow: 0 0 12px rgba(139, 90, 43, 0.25);
+}
+
+.node-copper {
+  border-color: #b45309;
+  box-shadow: 0 0 14px rgba(217, 119, 6, 0.35);
+}
+
+.node-gold {
+  border-color: #f59e0b;
+  box-shadow: 0 0 18px rgba(245, 166, 35, 0.45);
+}
+
+.rock-icon {
+  font-size: 1.6rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+  line-height: 1;
+}
+
+.ore-sparkle {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 0.72rem;
+  opacity: 0.85;
+  animation: sparklePulse 2s infinite ease-in-out;
+}
+
+/* Station Titles */
+.station-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.station-title {
+  font-weight: 800;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+
+.station-tier-tag {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Defined Worker Spot where miners stand while digging */
+.worker-designated-spot {
+  width: 44px;
+  height: 44px;
+  border: 2px dashed rgba(45, 112, 246, 0.5);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: rgba(45, 112, 246, 0.08);
+  transition: all 0.2s ease;
+}
+
+.spot-marker-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid rgba(45, 112, 246, 0.25);
+  animation: ringPulse 2.5s infinite ease-in-out;
+}
+
+.spot-label {
+  font-size: 0.52rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1;
+}
+
+.station-locked .worker-designated-spot {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: transparent;
+}
+
+.station-locked .spot-marker-ring {
+  border-color: transparent;
+  animation: none;
+}
+
+.station-locked .spot-label {
+  color: var(--text-muted);
+}
+
+/* Station Actions (Level Up / Speed Up / Unlock Buttons) */
+.station-actions-col {
+  display: flex;
+  align-items: center;
+}
+
+.btn-station-upgrade {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 88px;
+  box-shadow: 0 3px 10px var(--accent-blue-glow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-station-upgrade:hover {
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  transform: translateY(-1px);
+}
+
+.btn-station-upgrade:active {
+  transform: translateY(0);
+}
+
+.upgrade-btn-main, .unlock-btn-main {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.upgrade-action-text, .unlock-text {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.upgrade-level-badge {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-pill);
+  padding: 1px 5px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #93c5fd;
+}
+
+.upgrade-cost-tag {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.cost-coin-icon {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.cost-amount {
+  line-height: 1;
+}
+
+.btn-station-unlock {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 90px;
+  box-shadow: 0 3px 10px rgba(217, 119, 6, 0.4);
+  transition: transform 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-station-unlock:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #92400e 100%);
+  transform: translateY(-1px);
+}
+
+.unlock-icon {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+/* --------------------------------------------------------------------------
+   20.3 Worker Movement Layer (#workers-container)
+   Positioned absolute over the arena where animated miners move
+   -------------------------------------------------------------------------- */
+#workers-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 25;
+  overflow: hidden;
+}
+
+.animated-miner {
+  position: absolute;
+  width: 38px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transform-origin: bottom center;
+  transition: transform 0.3s ease;
+}
+
+/* Miner actively digging at station spot */
+.miner-working {
+  animation: minerDigAction 0.8s infinite ease-in-out;
+}
+
+.miner-bubble {
+  position: absolute;
+  top: -12px;
+  font-size: 0.72rem;
+  background: rgba(14, 16, 21, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 1px 4px;
+  line-height: 1;
+}
+
+.miner-sprite {
+  font-size: 1.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+}
+
+.miner-shadow {
+  width: 22px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 50%;
+  filter: blur(1px);
+  margin-top: 1px;
+}
+
+/* Miner hauling collected ore up the ladder */
+.miner-hauling {
+  animation: minerHaulMove 3.5s infinite alternate ease-in-out;
+}
+
+.miner-backpack-badge {
+  position: absolute;
+  top: -12px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  background: #d97706;
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  line-height: 1.2;
+}
+
+/* --------------------------------------------------------------------------
+   20.4 Required Keyframe Animations (chipRock & bounceCoin)
+   -------------------------------------------------------------------------- */
+
+/* Subtle shake effect when an ore node takes damage */
+@keyframes chipRock {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  20% {
+    transform: translate(-3px, 1px) rotate(-3deg);
+  }
+  40% {
+    transform: translate(3px, -2px) rotate(3deg);
+  }
+  60% {
+    transform: translate(-2px, 2px) rotate(-2deg);
+  }
+  80% {
+    transform: translate(2px, -1px) rotate(1deg);
+  }
+}
+
+.chip-damage {
+  animation: chipRock 0.28s ease-in-out;
+}
+
+/* Upward floating fade-out for earned coin badges */
+@keyframes bounceCoin {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -12px) scale(1.15);
+  }
+  60% {
+    transform: translate(-50%, -24px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -48px) scale(0.9);
+  }
+}
+
+.coin-badge-bounce {
+  animation: bounceCoin 1s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+/* Complementary Tycoon Animations */
+@keyframes minerDigAction {
+  0%, 100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  40% {
+    transform: rotate(-12deg) translateY(-2px);
+  }
+  60% {
+    transform: rotate(8deg) translateY(1px);
+  }
+}
+
+@keyframes minerHaulMove {
+  0% {
+    transform: translateX(0) scaleX(1);
+  }
+  48% {
+    transform: translateX(85px) translateY(-8px) scaleX(1);
+  }
+  52% {
+    transform: translateX(85px) translateY(-8px) scaleX(-1);
+  }
+  100% {
+    transform: translateX(0) scaleX(-1);
+  }
+}
+
+@keyframes ringPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.85;
+  }
+}
+
+@keyframes sparklePulse {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes cartBob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   21. Game Feel, Juice Particles & Combat/Economy Feedback
+   -------------------------------------------------------------------------- */
+
+/* Dedicated overlay layer inside #mine-stage */
+.juice-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 65;
+  overflow: hidden;
+}
+
+/* Floating combat / economy text (+15 🪙, CRIT!, etc.) */
+@keyframes juiceFloatUp {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(0.9);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1.15);
+  }
+  75% {
+    opacity: 0.9;
+    transform: translate(-50%, -32px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -40px) scale(0.85);
+  }
+}
+
+.juice-floating-text {
+  position: absolute;
+  pointer-events: none;
+  font-weight: 800;
+  font-size: 0.92rem;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  animation: juiceFloatUp 800ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  z-index: 70;
+}
+
+/* Dispersing rock impact particle fragments */
+@keyframes rockParticleDisperse {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  40% {
+    opacity: 1;
+    transform: translate(var(--tx), var(--ty)) rotate(calc(var(--rot) * 0.5)) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--tx) * 1.3), calc(var(--ty) + var(--drop))) rotate(var(--rot)) scale(0.3);
+  }
+}
+
+.juice-rock-particle {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 1px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  animation: rockParticleDisperse 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  z-index: 68;
+}
+
+/* Subtle squash-and-stretch punch feedback on ore node rock */
+@keyframes oreNodeSquashPunch {
+  0% {
+    transform: scale(1, 1);
+  }
+  25% {
+    transform: scale(1.18, 0.82);
+  }
+  50% {
+    transform: scale(0.88, 1.12);
+  }
+  75% {
+    transform: scale(1.05, 0.95);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+.node-squash-punch {
+  animation: oreNodeSquashPunch 300ms cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+}
+
+/* Floating Station Level Up Badge */
+@keyframes levelUpFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) scale(0.7);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -6px) scale(1.15);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -24px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -46px) scale(0.9);
+  }
+}
+
+.level-up-float-badge {
+  position: absolute;
+  z-index: 70;
+  pointer-events: none;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #facc15;
+  background: linear-gradient(135deg, rgba(24, 20, 36, 0.95), rgba(38, 28, 55, 0.95));
+  border: 1px solid rgba(250, 204, 21, 0.6);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  box-shadow: 0 4px 14px rgba(250, 204, 21, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  animation: levelUpFloat 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Dynamic Disabled Button States */
+.btn-station-upgrade:disabled,
+.btn-station-unlock:disabled,
+.btn-hire-miner:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.85);
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Worker Recruitment Button */
+.section-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btn-hire-miner {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px var(--accent-green-glow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-hire-miner:hover:not(:disabled) {
+  background: linear-gradient(135deg, #34d399 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-green-glow);
+}
+
+.btn-hire-miner:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.hire-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.hire-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.hire-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.hire-cost {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+
+
+
+
+

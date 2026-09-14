@@ -1,0 +1,105 @@
+import assert from 'node:assert';
+import {
+  STATIONS,
+  getStationUpgradeCost,
+  getStationOreValue,
+  getStation,
+  unlockStation,
+  upgradeStation,
+  damageStation,
+  getHireMinerCost,
+  hireExtraMiner
+} from '../js/stations.js';
+import {
+  getStationRockCoords,
+  getStationParticleColor
+} from '../js/juice.js';
+import { gameState } from '../js/state.js';
+import { activeMinerAgents } from '../js/minerFSM.js';
+
+console.log('--- TEST 1: Station Scaling & Formulas ---');
+const dirt = getStation('station-1');
+assert.ok(dirt, 'Station 1 must exist');
+assert.strictEqual(dirt.level, 1);
+assert.strictEqual(dirt.maxHP, 20);
+assert.strictEqual(dirt.currentHP, 20);
+
+// Formula: Math.floor(10 * Math.pow(1.15, 1)) = Math.floor(11.5) = 11
+const costLv1 = getStationUpgradeCost(dirt);
+assert.strictEqual(costLv1, 11, `Expected Lv1 dirt upgrade cost to be 11, got ${costLv1}`);
+
+// Ore value at Lv 1: 1 * (1 + 0) = 1
+const valLv1 = getStationOreValue(dirt);
+assert.strictEqual(valLv1, 1, `Expected Lv1 ore value to be 1, got ${valLv1}`);
+
+console.log('✓ Station 1 baseline formulas verified');
+
+console.log('--- TEST 2: Station Damage & Instant Regeneration ---');
+// Max HP is 20. Damage 15 -> 5 HP remaining, returns false (not broken)
+const broke1 = damageStation('station-1', 15);
+assert.strictEqual(broke1, false, 'Station should not break at 5 HP');
+assert.strictEqual(dirt.currentHP, 5, 'Station currentHP should be 5');
+
+// Damage 10 -> drops below 0, breaks and resets to 20 immediately
+const broke2 = damageStation('station-1', 10);
+assert.strictEqual(broke2, true, 'Station should break on lethal damage');
+assert.strictEqual(dirt.currentHP, dirt.maxHP, 'Station currentHP should immediately regenerate to maxHP');
+
+console.log('✓ Node damage and instant regeneration verified');
+
+console.log('--- TEST 3: Station Upgrades & Unlocks ---');
+gameState.player.coins = 5000;
+
+// Upgrade station-1
+const upRes = upgradeStation('station-1');
+assert.ok(upRes.success, 'Upgrade should succeed when player has sufficient coins');
+assert.strictEqual(dirt.level, 2, 'Station level should be incremented to 2');
+assert.strictEqual(upRes.cost, 11, 'Upgrade cost deducted should be 11');
+
+// Ore value at Lv 2: 1 * (1 + 0.2) = 1.2 -> rounded to 1
+// At Lv 6: 1 * (1 + 1.0) = 2
+dirt.level = 6;
+assert.strictEqual(getStationOreValue(dirt), 2, 'At Lv 6, dirt ore value should scale to 2');
+dirt.level = 2; // reset back
+
+// Unlock station-2 (Copper Node, 250 coins)
+const copper = getStation('station-2');
+assert.ok(copper, 'Station 2 must exist');
+assert.strictEqual(copper.unlocked, false, 'Copper should start locked');
+const unlockRes = unlockStation('station-2');
+assert.ok(unlockRes.success, 'Unlock should succeed with sufficient coins');
+assert.strictEqual(copper.unlocked, true, 'Copper should now be unlocked');
+
+console.log('✓ Station upgrade and unlock mechanics verified');
+
+console.log('--- TEST 4: Miner Recruitment & Cost Scaling ---');
+// Worker hiring cost formula: Math.floor(100 * Math.pow(1.4, Math.max(0, count - 1)))
+activeMinerAgents.length = 2;
+const hireCost1 = getHireMinerCost();
+assert.strictEqual(hireCost1, 140, `Cost for 3rd worker should be 140, got ${hireCost1}`);
+
+const hireRes = hireExtraMiner();
+assert.ok(hireRes.success, 'Hiring extra miner should succeed');
+assert.strictEqual(activeMinerAgents.length, 3, 'Worker count should increase to 3');
+
+const hireCost2 = getHireMinerCost();
+// Count = 3 -> 100 * Math.pow(1.4, 2) = 100 * 1.96 = 196
+assert.strictEqual(hireCost2, 196, `Cost for 4th worker should be 196, got ${hireCost2}`);
+
+console.log('✓ Miner recruitment and geometric hiring cost verified');
+
+console.log('--- TEST 5: Juice System Coordinates & Colors ---');
+const coords1 = getStationRockCoords('station-1');
+assert.ok(coords1.x > 0 && coords1.y > 0, 'Station 1 rock coords must be valid numbers');
+
+const color1 = getStationParticleColor('station-1');
+const color2 = getStationParticleColor('station-2');
+const color3 = getStationParticleColor('station-3');
+assert.strictEqual(color1, '#8b6d48', 'Station 1 color should be dirt earth');
+assert.strictEqual(color2, '#d97706', 'Station 2 color should be copper bronze');
+assert.strictEqual(color3, '#fbbf24', 'Station 3 color should be gold amber');
+
+console.log('✓ Juice rock coordinates and particle color mapping verified');
+
+console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY!');
+
