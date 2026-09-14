@@ -7,6 +7,9 @@ import { ORES } from './data/ores.js';
 import { UPGRADES, getUpgradeCost } from './data/upgrades.js';
 import { MINES } from './data/mines.js';
 import { gameState, getOreDefinition, getEffectiveRequiredLevel } from './state.js';
+import { formatNumber } from './utils/format.js';
+
+export { formatNumber };
 
 /**
  * Triggers a visual floating coin indicator on screen when coins are earned.
@@ -20,7 +23,22 @@ export function triggerCoinFloatAnimation(amountText) {
 
   const floatEl = document.createElement('div');
   floatEl.className = 'coin-float-indicator';
-  floatEl.textContent = `+${amountText} 🪙`;
+
+  let text;
+  if (typeof amountText === 'number') {
+    text = `+${formatNumber(amountText)} 🪙`;
+  } else {
+    const s = String(amountText).trim();
+    if (s.includes('🪙')) {
+      text = s;
+    } else if (s.startsWith('+') || s.startsWith('-')) {
+      text = `${s} 🪙`;
+    } else {
+      text = `+${s} 🪙`;
+    }
+  }
+
+  floatEl.textContent = text;
 
   appContainer.appendChild(floatEl);
 
@@ -58,7 +76,7 @@ export function sellOre(oreId, quantity) {
   gameState.inventory[oreId] -= quantity;
   gameState.player.coins += coinsEarned;
 
-  triggerCoinFloatAnimation(coinsEarned.toLocaleString());
+  triggerCoinFloatAnimation(formatNumber(coinsEarned));
 
   return {
     success: true,
@@ -107,7 +125,7 @@ export function sellAllOres() {
 
   if (totalCoinsEarned > 0) {
     gameState.player.coins += totalCoinsEarned;
-    triggerCoinFloatAnimation(totalCoinsEarned.toLocaleString());
+    triggerCoinFloatAnimation(formatNumber(totalCoinsEarned));
   }
 
   return {
@@ -143,7 +161,7 @@ export function buyUpgrade(upgradeId) {
       success: false,
       upgradeId,
       cost,
-      reason: `Insufficient coins. Requires ${cost.toLocaleString()} 🪙.`
+      reason: `Insufficient coins. Requires ${formatNumber(cost)} 🪙.`
     };
   }
 

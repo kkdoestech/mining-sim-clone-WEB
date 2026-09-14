@@ -40,7 +40,9 @@ import {
   updateMineProgress,
   showOfflineProgressModal,
   showLevelUpBadge,
+  triggerMilestoneCelebration,
   updateStationButtonsState,
+  getBuyMode,
   initEventListeners
 } from './ui.js';
 import {
@@ -53,6 +55,7 @@ import {
   initTycoonWorkers
 } from './minerFSM.js';
 import { createFloatingText } from './juice.js';
+import { formatNumber } from './utils/format.js';
 
 
 /**
@@ -87,7 +90,7 @@ function initApp() {
   if (offlineProgress) {
     showOfflineProgressModal(offlineProgress, () => {
       // On Claim: animate coins, update views and immediately save
-      triggerCoinFloatAnimation(offlineProgress.totalCoins.toLocaleString());
+      triggerCoinFloatAnimation(formatNumber(offlineProgress.totalCoins));
       updateHeader(gameState.player);
       renderBackpack(gameState.inventory);
       renderMinesList(MINES, gameState.activeMines, gameState.miners, gameState.player);
@@ -156,11 +159,15 @@ function initApp() {
       }
     },
 
-    onUpgradeStation: (stationId) => {
-      const res = upgradeStation(stationId);
+    onUpgradeStation: (stationId, mode) => {
+      const activeMode = mode || getBuyMode();
+      const res = upgradeStation(stationId, activeMode);
       if (res.success) {
-        showLevelUpBadge(stationId, res.newLevel);
-        triggerCoinFloatAnimation(`-${res.cost} 🪙`);
+        showLevelUpBadge(stationId, res.newLevel, res.levelsBought);
+        if (res.milestone) {
+          triggerMilestoneCelebration(stationId, res.milestone.banner);
+        }
+        triggerCoinFloatAnimation(`-${formatNumber(res.cost)} 🪙`);
         updateHeader(gameState.player);
         saveGame(gameState);
       }
@@ -170,7 +177,7 @@ function initApp() {
       const res = unlockStation(stationId);
       if (res.success) {
         showLevelUpBadge(stationId, 1);
-        triggerCoinFloatAnimation(`-${res.cost} 🪙`);
+        triggerCoinFloatAnimation(`-${formatNumber(res.cost)} 🪙`);
         updateHeader(gameState.player);
         saveGame(gameState);
       }
@@ -179,7 +186,7 @@ function initApp() {
     onHireMiner: () => {
       const res = hireExtraMiner();
       if (res.success) {
-        triggerCoinFloatAnimation(`-${res.cost} 🪙`);
+        triggerCoinFloatAnimation(`-${formatNumber(res.cost)} 🪙`);
         createFloatingText(75, 50, '+1 Worker 👷‍♂️', '#10b981');
         updateHeader(gameState.player);
         saveGame(gameState);

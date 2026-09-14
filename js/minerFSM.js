@@ -11,6 +11,7 @@ import {
   STATIONS,
   damageStation,
   getStationOreValue,
+  getStationSpeedMultiplier,
   getStation,
   unlockStation,
   upgradeStation
@@ -22,6 +23,7 @@ import {
   getStationRockCoords,
   getStationParticleColor
 } from './juice.js';
+import { formatNumber } from './utils/format.js';
 
 /**
  * Primary FSM State Enum for Autonomous Miner Agents
@@ -110,8 +112,8 @@ export class MinerAgent {
     this.id = config.id || `miner_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     this.name = config.name || 'Novice Digger';
     this.avatar = config.avatar || '👷‍♂️';
-    this.miningPower = config.miningPower || 25; // Damage per second
-    this.moveSpeed = config.moveSpeed || 110;    // Pixels per second
+    this.miningPower = config.miningPower || 15; // Tuned so early hits break blocks in 1.5-2.0s
+    this.moveSpeed = config.moveSpeed || 220;    // Doubled speed: reaches nodes in ~1 second
     this.backpackCapacity = config.backpackCapacity || 5; // Max carried ores
 
     /** @type {{ oreId: string, value: number }[]} */
@@ -212,13 +214,15 @@ export class MinerAgent {
           break;
         }
 
-        const damage = this.miningPower * deltaTime;
+        // Apply active milestone speed boost (e.g. Lv 25+ 50% boost)
+        const speedMult = getStationSpeedMultiplier(this.targetStation);
+        const damage = this.miningPower * speedMult * deltaTime;
         const broke = damageStation(this.targetStation.id, damage);
 
-        // Periodic rock hit juice feedback
+        // Periodic rock hit juice feedback (frequency accelerates with station speed boost)
         this.chipCooldown -= deltaTime;
         if (this.chipCooldown <= 0) {
-          this.chipCooldown = 0.4;
+          this.chipCooldown = 0.35 / speedMult;
           triggerStationShake(this.targetStation.id);
 
           // Juice: rock impact particles & squash-and-stretch punch
@@ -269,7 +273,7 @@ export class MinerAgent {
           this.currentX = this.targetX;
           this.currentY = this.targetY;
           this.state = MinerState.DEPOSITING;
-          this.depositTimer = 0.5; // 0.5s pause to deposit
+          this.depositTimer = 0.2; // 0.2s rapid turnaround for quick cycles
         } else {
           const step = Math.min(dist, this.moveSpeed * deltaTime);
           this.currentX += (dx / dist) * step;
@@ -301,7 +305,7 @@ export class MinerAgent {
             }
 
             // Visual juice feedback: floating combat/economy text at the Surface Merchant Cart
-            createFloatingText(this.currentX + 18, this.currentY - 14, `+${totalCoinsEarned} 🪙`, '#f5a623');
+            createFloatingText(this.currentX + 18, this.currentY - 14, `+${formatNumber(totalCoinsEarned)} 🪙`, '#f5a623');
           }
 
           // Empty backpack
@@ -350,12 +354,18 @@ export class MinerAgent {
       sprite.style.transform = `scaleX(${this.facing})`;
     }
 
-    // Toggle .mining-swing animation class
+    // Toggle .mining-swing and .mining-fast-swing animation classes
     if (this.state === MinerState.MINING) {
       this.domElement.classList.add('mining-swing');
+      const speedMult = getStationSpeedMultiplier(this.targetStation);
+      if (speedMult > 1.0) {
+        this.domElement.classList.add('mining-fast-swing');
+      } else {
+        this.domElement.classList.remove('mining-fast-swing');
+      }
       if (this.bubbleElement) this.bubbleElement.style.display = 'block';
     } else {
-      this.domElement.classList.remove('mining-swing');
+      this.domElement.classList.remove('mining-swing', 'mining-fast-swing');
       if (this.bubbleElement) this.bubbleElement.style.display = 'none';
     }
   }
@@ -407,13 +417,13 @@ export function initTycoonWorkers(count = 2) {
 
   const targetCount = Math.max(2, Number(count) || 2);
 
-  // Spawn Worker 1: Veteran Digger
+  // Spawn Worker 1: Veteran Digger (tuned for 1.5–2.0s block break on 20 HP node)
   spawnMinerAgent({
     id: 'worker_1',
     name: 'Rookie Digger',
     avatar: '👷‍♂️',
-    miningPower: 30,
-    moveSpeed: 110,
+    miningPower: 12,
+    moveSpeed: 220, // Doubled speed
     backpackCapacity: 4,
     startX: 175,
     startY: 156
@@ -424,8 +434,8 @@ export function initTycoonWorkers(count = 2) {
     id: 'worker_2',
     name: 'Goblin Sifter',
     avatar: '🧌',
-    miningPower: 22,
-    moveSpeed: 135,
+    miningPower: 15,
+    moveSpeed: 260, // Doubled speed
     backpackCapacity: 5,
     startX: SURFACE_WAYPOINT.x,
     startY: SURFACE_WAYPOINT.y
@@ -439,8 +449,8 @@ export function initTycoonWorkers(count = 2) {
       id: `worker_${i + 1}`,
       name: names[(i - 2) % names.length],
       avatar: avatars[(i - 2) % avatars.length],
-      miningPower: 25 + (i * 5),
-      moveSpeed: 110 + (i * 5),
+      miningPower: 14 + (i * 3),
+      moveSpeed: 220 + (i * 10),
       backpackCapacity: 4 + (i % 3),
       startX: 75,
       startY: 45

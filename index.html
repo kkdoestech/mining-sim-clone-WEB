@@ -137,6 +137,14 @@
 
           <!-- Middle/Bottom Underground Zone: Vertical Ladder Rails & 3 Horizontal Station Platforms -->
           <div id="underground-zone">
+            <!-- Sticky Global Buy-Mode Multiplier Bar (1x / 10x / MAX) -->
+            <div class="buy-mode-bar" id="buy-mode-bar" role="radiogroup" aria-label="Upgrade Multi-Buy Mode">
+              <span class="buy-mode-label">BUY</span>
+              <button type="button" class="btn-buy-mode active" id="buy-mode-1x" data-buy-mode="1x" aria-pressed="true">1x</button>
+              <button type="button" class="btn-buy-mode" id="buy-mode-10x" data-buy-mode="10x" aria-pressed="false">10x</button>
+              <button type="button" class="btn-buy-mode" id="buy-mode-max" data-buy-mode="MAX" aria-pressed="false">MAX</button>
+            </div>
+
             <!-- Vertical Ladder Rails spanning the quarry shaft -->
             <div class="ladder-shaft">
               <div class="ladder-rail left-rail"></div>
@@ -161,6 +169,10 @@
                 </div>
                 <div class="station-identity">
                   <h3 class="station-title">Dirt & Coal Node</h3>
+                  <div class="station-milestone-pill" id="milestone-station-1" title="Milestone Boost Progress">
+                    <span class="milestone-icon">⚡</span>
+                    <span class="milestone-text" id="milestone-text-station-1">Lv. 1 / 10 ➔ 2x Boost!</span>
+                  </div>
                   <span class="station-tier-tag">Layer 1 • Shallow</span>
                 </div>
               </div>
@@ -194,7 +206,7 @@
                 <div class="ore-node-wrapper">
                   <div class="node-hp-bar">
                     <div class="node-hp-fill node-copper-fill" id="hp-fill-station-2" style="width: 100%;"></div>
-                    <span class="node-hp-text" id="hp-text-station-2">80/80 HP</span>
+                    <span class="node-hp-text" id="hp-text-station-2">40/40 HP</span>
                   </div>
                   <div class="ore-node-rock node-copper" id="rock-station-2" title="Copper Node">
                     <span class="rock-icon">🧱</span>
@@ -203,6 +215,10 @@
                 </div>
                 <div class="station-identity">
                   <h3 class="station-title">Copper Node</h3>
+                  <div class="station-milestone-pill" id="milestone-station-2" title="Milestone Boost Progress">
+                    <span class="milestone-icon">⚡</span>
+                    <span class="milestone-text" id="milestone-text-station-2">Lv. 1 / 10 ➔ 2x Boost!</span>
+                  </div>
                   <span class="station-tier-tag">Layer 2 • Subterranean</span>
                 </div>
               </div>
@@ -236,7 +252,7 @@
                 <div class="ore-node-wrapper">
                   <div class="node-hp-bar">
                     <div class="node-hp-fill node-gold-fill" id="hp-fill-station-3" style="width: 100%;"></div>
-                    <span class="node-hp-text" id="hp-text-station-3">300/300 HP</span>
+                    <span class="node-hp-text" id="hp-text-station-3">75/75 HP</span>
                   </div>
                   <div class="ore-node-rock node-gold" id="rock-station-3" title="Gold Node">
                     <span class="rock-icon">🪙</span>
@@ -245,6 +261,10 @@
                 </div>
                 <div class="station-identity">
                   <h3 class="station-title">Gold Node</h3>
+                  <div class="station-milestone-pill" id="milestone-station-3" title="Milestone Boost Progress">
+                    <span class="milestone-icon">⚡</span>
+                    <span class="milestone-text" id="milestone-text-station-3">Lv. 1 / 10 ➔ 2x Boost!</span>
+                  </div>
                   <span class="station-tier-tag">Layer 3 • Deep Core</span>
                 </div>
               </div>

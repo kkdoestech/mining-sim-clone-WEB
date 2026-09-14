@@ -2467,6 +2467,152 @@ html, body {
   color: var(--accent-gold);
 }
 
+/* Milestone Progress Pill & Indication */
+.station-milestone-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(30, 26, 44, 0.85);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  margin-top: 2px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fde047;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.station-milestone-pill .milestone-icon {
+  font-size: 0.65rem;
+  filter: drop-shadow(0 0 4px #eab308);
+}
+
+.station-milestone-pill.milestone-max {
+  border-color: rgba(236, 72, 153, 0.6);
+  color: #f472b6;
+  background: rgba(45, 20, 40, 0.9);
+}
+
+.station-milestone-pill.milestone-max .milestone-icon {
+  filter: drop-shadow(0 0 4px #ec4899);
+}
+
+/* Fast swing animation for miners with active milestone speed boost */
+.animated-miner.mining-fast-swing.mining-swing .miner-sprite {
+  animation: minerDigSwing 0.24s infinite ease-in-out !important;
+}
+
+/* Celebratory Milestone Reached Banner */
+@keyframes milestoneCelebration {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -35%) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -55%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -75%) scale(0.92);
+  }
+}
+
+.milestone-celebration-banner {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  z-index: 100;
+  pointer-events: none;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 45%, #b45309 100%);
+  color: #ffffff;
+  border: 2px solid #fef08a;
+  border-radius: var(--radius-md);
+  padding: 8px 18px;
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 8px 28px rgba(245, 158, 11, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+  animation: milestoneCelebration 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Sticky Global Multi-Buy Toggle Bar (1x / 10x / MAX) */
+.buy-mode-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(180deg, rgba(14, 16, 22, 0.92) 0%, rgba(14, 16, 22, 0.75) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.buy-mode-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+
+.btn-buy-mode {
+  background: rgba(30, 32, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 3px 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.btn-buy-mode:hover:not(.active) {
+  background: rgba(45, 48, 62, 0.95);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-buy-mode.active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  border-color: #fde047;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.45);
+  transform: scale(1.05);
+}
+
+/* Hold-to-upgrade active pulse */
+.btn-station-upgrade.holding-purchase {
+  transform: scale(0.96) !important;
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.7) !important;
+  filter: brightness(1.15) !important;
+}
+
 
 
 

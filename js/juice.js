@@ -4,6 +4,10 @@
  * dynamic rock impact particle bursts, and squash-and-stretch impact animations.
  */
 
+import { formatNumber } from './utils/format.js';
+
+export { formatNumber };
+
 /**
  * Retrieves or lazily creates the dedicated overlay container inside #mine-stage.
  * @returns {HTMLElement | null}
@@ -41,7 +45,7 @@ export function createFloatingText(x, y, text, color = '#f5a623') {
 
   const span = document.createElement('span');
   span.className = 'juice-floating-text';
-  span.textContent = text;
+  span.textContent = typeof text === 'number' ? `+${formatNumber(text)} 🪙` : String(text);
   span.style.left = `${Math.round(x)}px`;
   span.style.top = `${Math.round(y)}px`;
 

@@ -56,10 +56,10 @@ assert.ok(upRes.success, 'Upgrade should succeed when player has sufficient coin
 assert.strictEqual(dirt.level, 2, 'Station level should be incremented to 2');
 assert.strictEqual(upRes.cost, 11, 'Upgrade cost deducted should be 11');
 
-// Ore value at Lv 2: 1 * (1 + 0.2) = 1.2 -> rounded to 1
-// At Lv 6: 1 * (1 + 1.0) = 2
-dirt.level = 6;
-assert.strictEqual(getStationOreValue(dirt), 2, 'At Lv 6, dirt ore value should scale to 2');
+// Ore value at Lv 2: 1 * 1.08^1 * 1 = 1.08 -> rounded to 1
+// At Lv 10 (2x milestone): 1 * 1.08^9 * 2 = 4
+dirt.level = 10;
+assert.strictEqual(getStationOreValue(dirt), 4, 'At Lv 10, dirt ore value should scale to 4 with 2x milestone');
 dirt.level = 2; // reset back
 
 // Unlock station-2 (Copper Node, 250 coins)

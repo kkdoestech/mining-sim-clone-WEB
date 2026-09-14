@@ -17,7 +17,12 @@ import {
 import {
   STATIONS,
   getStationUpgradeCost,
-  getHireMinerCost
+  getHireMinerCost,
+  STATION_MILESTONES,
+  getMilestoneProgressInfo,
+  getNextMilestone,
+  calculateCostForNLevels,
+  calculateMaxAffordableLevels
 } from './stations.js';
 import {
   createFloatingText,
@@ -26,6 +31,9 @@ import {
   getStationRockCoords,
   getStationParticleColor
 } from './juice.js';
+import { formatNumber } from './utils/format.js';
+
+export { formatNumber };
 
 // DOM Element Cache for high-frequency updates
 let elements = null;
@@ -93,8 +101,8 @@ export function updateHeader(player) {
   const els = getElements();
   if (!els.coins || !player) return;
 
-  els.coins.textContent = Number(player.coins).toLocaleString();
-  els.gems.textContent = Number(player.gems).toLocaleString();
+  els.coins.textContent = formatNumber(player.coins);
+  els.gems.textContent = formatNumber(player.gems);
   els.levelBadge.textContent = `Lv. ${player.level}`;
 
   const xpPercentage = Math.min(100, Math.max(0, (player.xp / player.xpNeeded) * 100));
@@ -104,7 +112,7 @@ export function updateHeader(player) {
   // Update Surface Zone indicators
   const surfaceCoins = document.getElementById('surface-coins-val');
   if (surfaceCoins) {
-    surfaceCoins.textContent = Number(player.coins).toLocaleString();
+    surfaceCoins.textContent = formatNumber(player.coins);
   }
 
   const capText = document.getElementById('surface-capacity-text');
@@ -120,9 +128,46 @@ export function updateHeader(player) {
   updateStationButtonsState(player.coins);
 }
 
+// Active multi-buy mode ('1x' | '10x' | 'MAX')
+let currentBuyMode = '1x';
+
 /**
- * Dynamically updates enabled/disabled and visual affordability states for
- * station upgrade buttons, unlock buttons, and the miner recruitment button.
+ * Returns the active multi-buy mode.
+ * @returns {'1x' | '10x' | 'MAX'}
+ */
+export function getBuyMode() {
+  return currentBuyMode;
+}
+
+/**
+ * Sets the active multi-buy mode and updates station buttons.
+ * @param {'1x' | '10x' | 'MAX'} mode
+ */
+export function setBuyMode(mode) {
+  if (['1x', '10x', 'MAX'].includes(mode)) {
+    currentBuyMode = mode;
+    updateBuyModeDOM();
+    updateStationButtonsState();
+  }
+}
+
+/**
+ * Synchronizes the active visual state on .btn-buy-mode buttons.
+ */
+export function updateBuyModeDOM() {
+  if (typeof document === 'undefined') return;
+  const buttons = document.querySelectorAll('.btn-buy-mode');
+  buttons.forEach(btn => {
+    const mode = btn.getAttribute('data-buy-mode');
+    const isActive = mode === currentBuyMode;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
+/**
+ * Dynamically updates enabled/disabled, labels, and visual affordability states for
+ * station upgrade buttons (reflecting 1x, 10x, and MAX modes), unlock buttons, and the miner recruitment button.
  * @param {number} [playerCoins]
  */
 export function updateStationButtonsState(playerCoins = (gameState?.player?.coins || 0)) {
@@ -134,18 +179,73 @@ export function updateStationButtonsState(playerCoins = (gameState?.player?.coin
       const upgradeBtn = document.getElementById(`upgrade-btn-${station.id}`) ||
                          document.querySelector(`[data-action="upgrade-station"][data-station="${station.id}"]`);
       if (upgradeBtn) {
-        const cost = getStationUpgradeCost(station);
+        const actionTextEl = upgradeBtn.querySelector('.upgrade-action-text');
+        const levelBadgeEl = document.getElementById(`level-badge-${station.id}`) || upgradeBtn.querySelector('.upgrade-level-badge');
         const costEl = document.getElementById(`cost-${station.id}`) || upgradeBtn.querySelector('.cost-amount');
-        if (costEl && costEl.textContent !== cost.toLocaleString()) {
-          costEl.textContent = cost.toLocaleString();
+
+        if (currentBuyMode === '10x') {
+          const cost10 = calculateCostForNLevels(station, 10);
+          if (actionTextEl) actionTextEl.textContent = '+10 Lvs';
+          if (levelBadgeEl) levelBadgeEl.textContent = `Lv. ${station.level} ➔ ${station.level + 10}`;
+          if (costEl && costEl.textContent !== formatNumber(cost10)) {
+            costEl.textContent = formatNumber(cost10);
+          }
+          upgradeBtn.disabled = playerCoins < cost10;
+        } else if (currentBuyMode === 'MAX') {
+          const maxAffordable = calculateMaxAffordableLevels(station, playerCoins);
+          if (maxAffordable.levels > 0) {
+            if (actionTextEl) actionTextEl.textContent = `+${maxAffordable.levels} Lvs`;
+            if (levelBadgeEl) levelBadgeEl.textContent = `Lv. ${station.level} ➔ ${station.level + maxAffordable.levels}`;
+            if (costEl && costEl.textContent !== formatNumber(maxAffordable.cost)) {
+              costEl.textContent = formatNumber(maxAffordable.cost);
+            }
+            upgradeBtn.disabled = false;
+          } else {
+            const cost1 = getStationUpgradeCost(station);
+            if (actionTextEl) actionTextEl.textContent = '+0 Lvs';
+            if (levelBadgeEl) levelBadgeEl.textContent = `Lv. ${station.level}`;
+            if (costEl && costEl.textContent !== formatNumber(cost1)) {
+              costEl.textContent = formatNumber(cost1);
+            }
+            upgradeBtn.disabled = true;
+          }
+        } else {
+          // Default: 1x mode
+          const cost1 = getStationUpgradeCost(station);
+          if (actionTextEl && actionTextEl.textContent !== 'Level Up') {
+            actionTextEl.textContent = 'Level Up';
+          }
+          if (levelBadgeEl) {
+            levelBadgeEl.textContent = `Lv. ${station.level}`;
+          }
+          if (costEl && costEl.textContent !== formatNumber(cost1)) {
+            costEl.textContent = formatNumber(cost1);
+          }
+          upgradeBtn.disabled = playerCoins < cost1;
         }
-        upgradeBtn.disabled = playerCoins < cost;
       }
     } else {
       const unlockBtn = document.getElementById(`unlock-btn-${station.id}`) ||
                         document.querySelector(`[data-action="unlock-station"][data-station="${station.id}"]`);
       if (unlockBtn) {
         unlockBtn.disabled = playerCoins < station.unlockCost;
+      }
+    }
+
+    // Refresh milestone progress indicator
+    const milestoneEl = document.getElementById(`milestone-text-${station.id}`);
+    const milestonePill = document.getElementById(`milestone-${station.id}`);
+    if (milestoneEl) {
+      const progress = getMilestoneProgressInfo(station.level);
+      if (milestoneEl.textContent !== progress.text) {
+        milestoneEl.textContent = progress.text;
+      }
+      if (milestonePill) {
+        if (progress.isMax) {
+          milestonePill.classList.add('milestone-max');
+        } else {
+          milestonePill.classList.remove('milestone-max');
+        }
       }
     }
   }
@@ -156,7 +256,7 @@ export function updateStationButtonsState(playerCoins = (gameState?.player?.coin
     const hireCost = getHireMinerCost();
     const hireCostEl = document.getElementById('hire-miner-cost');
     if (hireCostEl) {
-      hireCostEl.textContent = `🪙 ${hireCost.toLocaleString()}`;
+      hireCostEl.textContent = `🪙 ${formatNumber(hireCost)}`;
     }
     hireBtn.disabled = playerCoins < hireCost;
   }
@@ -166,8 +266,9 @@ export function updateStationButtonsState(playerCoins = (gameState?.player?.coin
  * Displays a floating level-up indicator badge over a station platform upon upgrade.
  * @param {string} stationId
  * @param {number} newLevel
+ * @param {number} [levelsBought=1]
  */
-export function showLevelUpBadge(stationId, newLevel) {
+export function showLevelUpBadge(stationId, newLevel, levelsBought = 1) {
   if (typeof document === 'undefined') return;
 
   const stationEl = document.getElementById(stationId);
@@ -175,7 +276,7 @@ export function showLevelUpBadge(stationId, newLevel) {
 
   const badge = document.createElement('div');
   badge.className = 'level-up-float-badge';
-  badge.textContent = `⭐ Lv. ${newLevel} UP!`;
+  badge.textContent = levelsBought > 1 ? `⭐ +${levelsBought} Lvs UP! (Lv. ${newLevel})` : `⭐ Lv. ${newLevel} UP!`;
 
   const button = stationEl.querySelector('.btn-station-upgrade') || stationEl;
   badge.style.left = `${button.offsetLeft + (button.offsetWidth / 2)}px`;
@@ -191,6 +292,79 @@ export function showLevelUpBadge(stationId, newLevel) {
 
   badge.addEventListener('animationend', cleanup, { once: true });
   setTimeout(cleanup, 1250);
+}
+
+/**
+ * Triggers an animated celebratory banner and particle burst when reaching a major station milestone
+ * (Level 10, 25, 50, 100).
+ * @param {string} stationId
+ * @param {string} [bannerText="MILESTONE REACHED!"]
+ */
+export function triggerMilestoneCelebration(stationId, bannerText = 'MILESTONE REACHED!') {
+  if (typeof document === 'undefined') return;
+
+  const stage = document.getElementById('mine-stage');
+  const stationEl = document.getElementById(stationId);
+  if (!stage) return;
+
+  // 1. Spawns the central glowing milestone celebration banner
+  const banner = document.createElement('div');
+  banner.className = 'milestone-celebration-banner';
+  banner.textContent = `🎉 ${bannerText}`;
+
+  if (stationEl) {
+    const stationTop = stationEl.offsetTop;
+    banner.style.top = `${Math.max(50, stationTop - 20)}px`;
+  }
+
+  stage.appendChild(banner);
+
+  const cleanupBanner = () => {
+    if (banner.parentNode) {
+      banner.parentNode.removeChild(banner);
+    }
+  };
+  banner.addEventListener('animationend', cleanupBanner, { once: true });
+  setTimeout(cleanupBanner, 2000);
+
+  // 2. Celebratory sparkles / confetti particles around station rock
+  const rockCoords = getStationRockCoords(stationId);
+  for (let i = 0; i < 4; i++) {
+    setTimeout(() => {
+      createRockImpactParticles(rockCoords.x + (Math.random() * 24 - 12), rockCoords.y + (Math.random() * 20 - 10), '#facc15');
+    }, i * 75);
+  }
+
+  // 3. Spawns upward floating gold text
+  createFloatingText(rockCoords.x, rockCoords.y - 30, bannerText, '#facc15');
+}
+
+// Bind to window for cross-module invocations
+if (typeof window !== 'undefined') {
+  window.triggerMilestoneCelebration = triggerMilestoneCelebration;
+}
+
+/**
+ * Updates the milestone progress indicators on all station cards.
+ */
+export function updateMilestoneIndicators() {
+  if (typeof document === 'undefined') return;
+
+  for (const station of STATIONS) {
+    const milestoneEl = document.getElementById(`milestone-text-${station.id}`);
+    const milestonePill = document.getElementById(`milestone-${station.id}`);
+    if (milestoneEl) {
+      const progress = getMilestoneProgressInfo(station.level);
+      milestoneEl.textContent = progress.text;
+      if (milestonePill) {
+        if (progress.isMax) {
+          milestonePill.classList.add('milestone-max');
+        } else {
+          milestonePill.classList.remove('milestone-max');
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -552,11 +726,11 @@ export function renderBackpack(inventory) {
               <span class="ore-name">${ore.name}</span>
               <span class="badge badge-rarity ${rarityClass}">${ore.rarity}</span>
             </div>
-            <span class="ore-pricing">${ore.sellValue} 🪙 each</span>
+            <span class="ore-pricing">${formatNumber(ore.sellValue)} 🪙 each</span>
           </div>
         </div>
         <div class="ore-actions">
-          <span class="ore-count-badge">x ${count.toLocaleString()}</span>
+          <span class="ore-count-badge">x ${formatNumber(count)}</span>
           <button
             type="button"
             class="btn-sell-single"
@@ -566,7 +740,7 @@ export function renderBackpack(inventory) {
             data-ore-qty="${count}"
             title="Sell all ${ore.name}"
           >
-            Sell (${(count * ore.sellValue).toLocaleString()} 🪙)
+            Sell (${formatNumber(count * ore.sellValue)} 🪙)
           </button>
         </div>
       </div>
@@ -579,11 +753,11 @@ export function renderBackpack(inventory) {
       <div class="summary-row">
         <div class="summary-meta">
           <span class="summary-title">Total Extracted Ores</span>
-          <span class="summary-value" style="color: var(--text-primary);">${totalItemsCount.toLocaleString()} units</span>
+          <span class="summary-value" style="color: var(--text-primary);">${formatNumber(totalItemsCount)} units</span>
         </div>
         <div class="summary-meta" style="text-align: right;">
           <span class="summary-title">Estimated Value</span>
-          <span class="summary-value">${estimatedTotalValue.toLocaleString()} 🪙</span>
+          <span class="summary-value">${formatNumber(estimatedTotalValue)} 🪙</span>
         </div>
       </div>
 
@@ -593,7 +767,7 @@ export function renderBackpack(inventory) {
         data-action="sell-all-ores"
         ${!hasItems ? 'disabled' : ''}
       >
-        <span>🪙 Sell All Ores (+${estimatedTotalValue.toLocaleString()} Coins)</span>
+        <span>🪙 Sell All Ores (+${formatNumber(estimatedTotalValue)} Coins)</span>
       </button>
     </div>
 
@@ -653,8 +827,8 @@ export function renderShop(currentUpgrades, playerCoins) {
             ${isMax
               ? '<span>Max Tier Reached</span>'
               : canAfford
-                ? `<span>Upgrade for ${cost.toLocaleString()} 🪙</span>`
-                : `<span>Requires ${cost.toLocaleString()} 🪙</span>`
+                ? `<span>Upgrade for ${formatNumber(cost)} 🪙</span>`
+                : `<span>Requires ${formatNumber(cost)} 🪙</span>`
             }
           </button>
         </div>
@@ -766,7 +940,7 @@ export function showOfflineProgressModal(summary, onClaim) {
             <span style="color: ${color}; font-size: 1.1rem;">⛏️</span>
             <span class="offline-loot-name">${name}</span>
           </div>
-          <span class="offline-loot-amount">+${count.toLocaleString()}</span>
+          <span class="offline-loot-amount">+${formatNumber(count)}</span>
         </div>
       `;
     }).join('');
@@ -790,7 +964,7 @@ export function showOfflineProgressModal(summary, onClaim) {
           <span style="font-size: 1.1rem;">🪙</span>
           <span class="offline-loot-name">Coins</span>
         </div>
-        <span class="offline-loot-amount">+${summary.totalCoins.toLocaleString()}</span>
+        <span class="offline-loot-amount">+${formatNumber(summary.totalCoins)}</span>
       </div>
 
       <!-- Experience earned -->
@@ -799,7 +973,7 @@ export function showOfflineProgressModal(summary, onClaim) {
           <span style="font-size: 1.1rem;">⚡</span>
           <span class="offline-loot-name">Experience</span>
         </div>
-        <span class="offline-loot-amount" style="color: #60a5fa;">+${summary.totalXp.toLocaleString()} XP</span>
+        <span class="offline-loot-amount" style="color: #60a5fa;">+${formatNumber(summary.totalXp)} XP</span>
       </div>
 
       <!-- Ores gained -->
@@ -868,9 +1042,85 @@ export function initEventListeners(handlers) {
     });
   }
 
+  // Multi-Buy Toggle Mode Bar Handlers
+  const buyModeBar = document.getElementById('buy-mode-bar');
+  if (buyModeBar) {
+    buyModeBar.addEventListener('click', (event) => {
+      const target = /** @type {HTMLElement} */ (event.target);
+      const btn = target.closest('[data-buy-mode]');
+      if (!btn) return;
+      const mode = btn.getAttribute('data-buy-mode');
+      if (mode) {
+        setBuyMode(mode);
+      }
+    });
+  }
+
   // Delegated click handler across #app-container
   const appContainer = document.getElementById('app-container');
   if (!appContainer) return;
+
+  // Rapid Hold-to-Upgrade Engine
+  let holdTimer = null;
+  let holdInterval = null;
+  let activeHoldButton = null;
+  let lastHoldActionTimestamp = 0;
+
+  function stopHoldingUpgrade() {
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+    if (holdInterval) {
+      clearInterval(holdInterval);
+      holdInterval = null;
+    }
+    if (activeHoldButton) {
+      activeHoldButton.classList.remove('holding-purchase');
+      activeHoldButton = null;
+    }
+  }
+
+  function executeHoldUpgrade(stationId) {
+    if (!handlers.onUpgradeStation) return;
+    handlers.onUpgradeStation(stationId, currentBuyMode);
+  }
+
+  // Bind pointerdown for instant response and repeat loop
+  appContainer.addEventListener('pointerdown', (event) => {
+    const target = /** @type {HTMLElement} */ (event.target);
+    const upgradeBtn = target.closest('[data-action="upgrade-station"]');
+    if (!upgradeBtn || upgradeBtn.disabled) return;
+
+    const stationId = upgradeBtn.getAttribute('data-station');
+    if (!stationId) return;
+
+    stopHoldingUpgrade();
+    activeHoldButton = upgradeBtn;
+    upgradeBtn.classList.add('holding-purchase');
+    lastHoldActionTimestamp = Date.now();
+
+    // Execute first upgrade immediately
+    executeHoldUpgrade(stationId);
+
+    // After 300ms hold debounce, repeatedly purchase every 100ms
+    holdTimer = setTimeout(() => {
+      holdInterval = setInterval(() => {
+        if (!activeHoldButton || activeHoldButton.disabled) {
+          stopHoldingUpgrade();
+          return;
+        }
+        executeHoldUpgrade(stationId);
+      }, 100);
+    }, 300);
+  });
+
+  // Release hold on pointer release or cancellation
+  window.addEventListener('pointerup', stopHoldingUpgrade);
+  window.addEventListener('pointercancel', stopHoldingUpgrade);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopHoldingUpgrade();
+  });
 
   appContainer.addEventListener('click', (event) => {
     const target = /** @type {HTMLElement} */ (event.target);
@@ -946,9 +1196,13 @@ export function initEventListeners(handlers) {
       }
 
       case 'upgrade-station': {
+        // If pointerdown executed within the last 350ms, avoid double trigger
+        if (Date.now() - lastHoldActionTimestamp < 350) {
+          break;
+        }
         const stationId = actionBtn.getAttribute('data-station');
         if (stationId && handlers.onUpgradeStation) {
-          handlers.onUpgradeStation(stationId);
+          handlers.onUpgradeStation(stationId, currentBuyMode);
         }
         break;
       }
@@ -997,7 +1251,7 @@ export function initEventListeners(handlers) {
       createRockImpactParticles(coords.x, coords.y, color);
 
       // 4. Spawns floating +1 coin text via Juice system
-      createFloatingText(coords.x, coords.y - 18, '+1 🪙', '#f5a623');
+      createFloatingText(coords.x, coords.y - 18, `+${formatNumber(1)} 🪙`, '#f5a623');
     });
   }
 }
