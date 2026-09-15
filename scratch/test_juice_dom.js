@@ -96,8 +96,10 @@ const span = createFloatingText(100, 150, '+25 🪙', '#f5a623');
 assert.ok(span, 'Floating text element must be created');
 assert.strictEqual(span.tagName, 'SPAN');
 assert.strictEqual(span.textContent, '+25 🪙');
-assert.strictEqual(span.style.left, '100px');
-assert.strictEqual(span.style.top, '150px');
+const leftVal = parseInt(span.style.left, 10);
+const topVal = parseInt(span.style.top, 10);
+assert.ok(leftVal >= 90 && leftVal <= 110, `Expected left near 100 with jitter, got ${leftVal}`);
+assert.ok(topVal >= 140 && topVal <= 160, `Expected top near 150 with jitter, got ${topVal}`);
 assert.strictEqual(span.style.color, '#f5a623');
 assert.ok(span.parentNode, 'Span must be attached to parent container');
 

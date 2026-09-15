@@ -21,10 +21,10 @@ console.log('--- TEST 1: Station Scaling & Formulas ---');
 const dirt = getStation('station-1');
 assert.ok(dirt, 'Station 1 must exist');
 assert.strictEqual(dirt.level, 1);
-assert.strictEqual(dirt.maxHP, 20);
-assert.strictEqual(dirt.currentHP, 20);
+assert.strictEqual(dirt.maxHP, 15);
+assert.strictEqual(dirt.currentHP, 15);
 
-// Formula: Math.floor(10 * Math.pow(1.15, 1)) = Math.floor(11.5) = 11
+// Formula: Math.floor(10 * Math.pow(1.11, 1)) = Math.floor(11.1) = 11
 const costLv1 = getStationUpgradeCost(dirt);
 assert.strictEqual(costLv1, 11, `Expected Lv1 dirt upgrade cost to be 11, got ${costLv1}`);
 
@@ -35,13 +35,13 @@ assert.strictEqual(valLv1, 1, `Expected Lv1 ore value to be 1, got ${valLv1}`);
 console.log('✓ Station 1 baseline formulas verified');
 
 console.log('--- TEST 2: Station Damage & Instant Regeneration ---');
-// Max HP is 20. Damage 15 -> 5 HP remaining, returns false (not broken)
-const broke1 = damageStation('station-1', 15);
+// Max HP is 15. Damage 10 -> 5 HP remaining, returns false (not broken)
+const broke1 = damageStation('station-1', 10);
 assert.strictEqual(broke1, false, 'Station should not break at 5 HP');
 assert.strictEqual(dirt.currentHP, 5, 'Station currentHP should be 5');
 
-// Damage 10 -> drops below 0, breaks and resets to 20 immediately
-const broke2 = damageStation('station-1', 10);
+// Damage 6 -> drops below 0, breaks and resets to 15 immediately
+const broke2 = damageStation('station-1', 6);
 assert.strictEqual(broke2, true, 'Station should break on lethal damage');
 assert.strictEqual(dirt.currentHP, dirt.maxHP, 'Station currentHP should immediately regenerate to maxHP');
 
@@ -73,20 +73,20 @@ assert.strictEqual(copper.unlocked, true, 'Copper should now be unlocked');
 console.log('✓ Station upgrade and unlock mechanics verified');
 
 console.log('--- TEST 4: Miner Recruitment & Cost Scaling ---');
-// Worker hiring cost formula: Math.floor(100 * Math.pow(1.4, Math.max(0, count - 1)))
+// Worker hiring costs: [0, 60, 320, 1200, 4500, 8000...]
+dirt.level = 10; // 2 slots on dirt + 1 on copper = 3 max slots
 activeMinerAgents.length = 2;
 const hireCost1 = getHireMinerCost();
-assert.strictEqual(hireCost1, 140, `Cost for 3rd worker should be 140, got ${hireCost1}`);
+assert.strictEqual(hireCost1, 320, `Cost for 3rd worker should be 320, got ${hireCost1}`);
 
 const hireRes = hireExtraMiner();
 assert.ok(hireRes.success, 'Hiring extra miner should succeed');
 assert.strictEqual(activeMinerAgents.length, 3, 'Worker count should increase to 3');
 
 const hireCost2 = getHireMinerCost();
-// Count = 3 -> 100 * Math.pow(1.4, 2) = 100 * 1.96 = 196
-assert.strictEqual(hireCost2, 196, `Cost for 4th worker should be 196, got ${hireCost2}`);
+assert.strictEqual(hireCost2, 1200, `Cost for 4th worker should be 1200, got ${hireCost2}`);
 
-console.log('✓ Miner recruitment and geometric hiring cost verified');
+console.log('✓ Miner recruitment and calibrated hiring cost verified');
 
 console.log('--- TEST 5: Juice System Coordinates & Colors ---');
 const coords1 = getStationRockCoords('station-1');

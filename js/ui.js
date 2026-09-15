@@ -12,18 +12,20 @@ import {
   calculateMinePower,
   getEffectiveRequiredLevel,
   getOreDefinition,
-  gameState
+  gameState,
+  getTotalStoredOres,
+  getMaxStorage,
+  isSurfaceStorageFull
 } from './state.js';
 import {
   STATIONS,
   getStationUpgradeCost,
   getHireMinerCost,
-  STATION_MILESTONES,
-  getMilestoneProgressInfo,
-  getNextMilestone,
-  calculateCostForNLevels,
-  calculateMaxAffordableLevels
+  getMaxWorkers,
+  getTotalMaxSlots,
+  getStationSlots
 } from './stations.js';
+import { activeMinerAgents } from './minerFSM.js';
 import {
   createFloatingText,
   createRockImpactParticles,
@@ -31,9 +33,8 @@ import {
   getStationRockCoords,
   getStationParticleColor
 } from './juice.js';
-import { formatNumber } from './utils/format.js';
-
-export { formatNumber };
+import { updateElevatorUI } from './rebirth.js';
+import { renderHotmGrid } from './hotm.js';
 
 // DOM Element Cache for high-frequency updates
 let elements = null;
@@ -68,6 +69,7 @@ function getElements() {
     elements = {
       coins: document.getElementById('player-coins'),
       gems: document.getElementById('player-gems'),
+      powder: document.getElementById('player-powder'),
       levelBadge: document.getElementById('player-level-badge'),
       xpFill: document.getElementById('player-xp-fill'),
       xpText: document.getElementById('player-xp-text'),
@@ -95,14 +97,17 @@ function getElements() {
 
 /**
  * Updates player economy, level badge, and XP bar in the top header.
- * @param {{ name: string, level: number, xp: number, xpNeeded: number, coins: number, gems: number }} player
+ * @param {{ name: string, level: number, xp: number, xpNeeded: number, coins: number, gems: number, powder?: number }} player
  */
 export function updateHeader(player) {
   const els = getElements();
   if (!els.coins || !player) return;
 
-  els.coins.textContent = formatNumber(player.coins);
-  els.gems.textContent = formatNumber(player.gems);
+  els.coins.textContent = Math.floor(player.coins).toLocaleString();
+  els.gems.textContent = Math.floor(player.gems).toLocaleString();
+  if (els.powder) {
+    els.powder.textContent = Math.floor(player.powder || 0).toLocaleString();
+  }
   els.levelBadge.textContent = `Lv. ${player.level}`;
 
   const xpPercentage = Math.min(100, Math.max(0, (player.xp / player.xpNeeded) * 100));
@@ -112,57 +117,20 @@ export function updateHeader(player) {
   // Update Surface Zone indicators
   const surfaceCoins = document.getElementById('surface-coins-val');
   if (surfaceCoins) {
-    surfaceCoins.textContent = formatNumber(player.coins);
+    surfaceCoins.textContent = Math.floor(player.coins).toLocaleString();
   }
 
   const capText = document.getElementById('surface-capacity-text');
   const capFill = document.getElementById('surface-capacity-fill');
   if (capText && capFill && gameState?.inventory) {
-    const totalOres = Object.values(gameState.inventory).reduce((a, b) => a + b, 0);
-    const maxCapacity = 20;
+    const totalOres = getTotalStoredOres();
+    const maxCapacity = getMaxStorage();
     capText.textContent = `${totalOres} / ${maxCapacity}`;
     capFill.style.width = `${Math.min(100, (totalOres / maxCapacity) * 100)}%`;
   }
 
   // Live-update station upgrade, unlock, and miner hire button affordability states
   updateStationButtonsState(player.coins);
-}
-
-// Active multi-buy mode ('1x' | '10x' | 'MAX')
-let currentBuyMode = '1x';
-
-/**
- * Returns the active multi-buy mode.
- * @returns {'1x' | '10x' | 'MAX'}
- */
-export function getBuyMode() {
-  return currentBuyMode;
-}
-
-/**
- * Sets the active multi-buy mode and updates station buttons.
- * @param {'1x' | '10x' | 'MAX'} mode
- */
-export function setBuyMode(mode) {
-  if (['1x', '10x', 'MAX'].includes(mode)) {
-    currentBuyMode = mode;
-    updateBuyModeDOM();
-    updateStationButtonsState();
-  }
-}
-
-/**
- * Synchronizes the active visual state on .btn-buy-mode buttons.
- */
-export function updateBuyModeDOM() {
-  if (typeof document === 'undefined') return;
-  const buttons = document.querySelectorAll('.btn-buy-mode');
-  buttons.forEach(btn => {
-    const mode = btn.getAttribute('data-buy-mode');
-    const isActive = mode === currentBuyMode;
-    btn.classList.toggle('active', isActive);
-    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
 }
 
 /**
@@ -187,8 +155,8 @@ export function updateStationButtonsState(playerCoins = (gameState?.player?.coin
           const cost10 = calculateCostForNLevels(station, 10);
           if (actionTextEl) actionTextEl.textContent = '+10 Lvs';
           if (levelBadgeEl) levelBadgeEl.textContent = `Lv. ${station.level} ➔ ${station.level + 10}`;
-          if (costEl && costEl.textContent !== formatNumber(cost10)) {
-            costEl.textContent = formatNumber(cost10);
+          if (costEl && costEl.textContent !== Math.floor(cost10).toLocaleString()) {
+            costEl.textContent = Math.floor(cost10).toLocaleString();
           }
           upgradeBtn.disabled = playerCoins < cost10;
         } else if (currentBuyMode === 'MAX') {
@@ -196,16 +164,16 @@ export function updateStationButtonsState(playerCoins = (gameState?.player?.coin
           if (maxAffordable.levels > 0) {
             if (actionTextEl) actionTextEl.textContent = `+${maxAffordable.levels} Lvs`;
             if (levelBadgeEl) levelBadgeEl.textContent = `Lv. ${station.level} ➔ ${station.level + maxAffordable.levels}`;
-            if (costEl && costEl.textContent !== formatNumber(maxAffordable.cost)) {
-              costEl.textContent = formatNumber(maxAffordable.cost);
+            if (costEl && costEl.textContent !== Math.floor(maxAffordable.cost).toLocaleString()) {
+              costEl.textContent = Math.floor(maxAffordable.cost).toLocaleString();
             }
             upgradeBtn.disabled = false;
           } else {
             const cost1 = getStationUpgradeCost(station);
             if (actionTextEl) actionTextEl.textContent = '+0 Lvs';
             if (levelBadgeEl) levelBadgeEl.textContent = `Lv. ${station.level}`;
-            if (costEl && costEl.textContent !== formatNumber(cost1)) {
-              costEl.textContent = formatNumber(cost1);
+            if (costEl && costEl.textContent !== Math.floor(cost1).toLocaleString()) {
+              costEl.textContent = Math.floor(cost1).toLocaleString();
             }
             upgradeBtn.disabled = true;
           }
@@ -218,8 +186,8 @@ export function updateStationButtonsState(playerCoins = (gameState?.player?.coin
           if (levelBadgeEl) {
             levelBadgeEl.textContent = `Lv. ${station.level}`;
           }
-          if (costEl && costEl.textContent !== formatNumber(cost1)) {
-            costEl.textContent = formatNumber(cost1);
+          if (costEl && costEl.textContent !== Math.floor(cost1).toLocaleString()) {
+            costEl.textContent = Math.floor(cost1).toLocaleString();
           }
           upgradeBtn.disabled = playerCoins < cost1;
         }
@@ -250,16 +218,133 @@ export function updateStationButtonsState(playerCoins = (gameState?.player?.coin
     }
   }
 
-  // 2. Hire Miner button
+  // 2. Refresh dynamic station dig slots
+  updateAllDigSlotsUI();
+
+  // 3. Hire Miner button
   const hireBtn = document.getElementById('hire-miner-btn');
   if (hireBtn) {
+    const maxWorkers = getTotalMaxSlots();
+    const currentWorkers = activeMinerAgents.length;
+    const isFull = currentWorkers >= maxWorkers;
+    const titleEl = hireBtn.querySelector('.hire-title');
     const hireCost = getHireMinerCost();
     const hireCostEl = document.getElementById('hire-miner-cost');
-    if (hireCostEl) {
-      hireCostEl.textContent = `🪙 ${formatNumber(hireCost)}`;
+
+    if (isFull) {
+      if (titleEl) titleEl.textContent = 'Slots Full (Reach Lv 10/25)';
+      if (hireCostEl) hireCostEl.textContent = `${currentWorkers}/${maxWorkers} Max`;
+      hireBtn.disabled = true;
+    } else {
+      if (titleEl) titleEl.textContent = `Hire Worker (${currentWorkers}/${maxWorkers})`;
+      if (hireCostEl) hireCostEl.textContent = `🪙 ${Math.floor(hireCost).toLocaleString()}`;
+      hireBtn.disabled = playerCoins < hireCost;
     }
-    hireBtn.disabled = playerCoins < hireCost;
   }
+
+  // 4. Elevator Descent Console
+  updateElevatorUI();
+}
+
+/**
+ * Renders and refreshes the expandable dig slot indicators for a station card:
+ * - Empty unlocked slot: Dashed circular outline (⭕)
+ * - Occupied slot: Miner icon (⛏️) currently working there
+ * - Locked slot: Faint padlock with required level threshold (Lv 10 / Lv 25)
+ * @param {MiningStation} station
+ */
+export function updateStationDigSlotsUI(station) {
+  if (typeof document === 'undefined' || !station) return;
+
+  const container = document.getElementById(`dig-slots-${station.id}`);
+  if (!container) return;
+
+  const reqLevels = [1, 10, 25];
+  const isStationUnlocked = station.unlocked || station.isUnlocked;
+
+  for (let i = 0; i < 3; i++) {
+    const slotEl = document.getElementById(`dig-slot-${station.id}-${i}`);
+    if (!slotEl) continue;
+
+    const reqLevel = reqLevels[i];
+    const isSlotUnlocked = isStationUnlocked && station.level >= reqLevel;
+
+    if (isSlotUnlocked) {
+      // Check if an active worker currently occupies this slot
+      const worker = activeMinerAgents.find(m =>
+        m.targetStation &&
+        m.targetStation.id === station.id &&
+        m.assignedSlotIndex === i &&
+        (m.state === 'MINING' || m.state === 'MOVING_TO_STATION')
+      );
+
+      if (worker) {
+        slotEl.className = 'dig-slot dig-slot-occupied';
+        slotEl.innerHTML = `<span class="slot-miner-icon">${worker.avatar || '⛏️'}</span>`;
+        slotEl.title = `Worker ${worker.name || ''} Digging`;
+      } else {
+        slotEl.className = 'dig-slot dig-slot-empty';
+        slotEl.innerHTML = `<span class="slot-marker">⭕</span>`;
+        slotEl.title = `Slot ${i + 1} (Available)`;
+      }
+    } else {
+      slotEl.className = 'dig-slot dig-slot-locked';
+      slotEl.innerHTML = `<span class="slot-lock">🔒</span><span class="slot-req">Lv ${reqLevel}</span>`;
+      slotEl.title = `Slot ${i + 1} (Unlocks at Lv ${reqLevel})`;
+    }
+  }
+}
+
+/**
+ * Refreshes dig slot indicators across all stations.
+ */
+export function updateAllDigSlotsUI() {
+  if (typeof document === 'undefined') return;
+  for (const station of STATIONS) {
+    updateStationDigSlotsUI(station);
+  }
+}
+
+/**
+ * Triggers a celebratory particle burst and scale pulse on a newly unlocked slot.
+ * @param {string} stationId
+ * @param {number} slotIndex
+ */
+export function triggerSlotUnlockBurst(stationId, slotIndex) {
+  if (typeof document === 'undefined') return;
+
+  const slotEl = document.getElementById(`dig-slot-${stationId}-${slotIndex}`);
+  if (!slotEl) return;
+
+  slotEl.classList.remove('slot-unlock-burst');
+  void slotEl.offsetWidth; // Force reflow
+  slotEl.classList.add('slot-unlock-burst');
+
+  const stage = document.getElementById('mine-stage');
+  if (stage) {
+    const stageRect = stage.getBoundingClientRect();
+    const slotRect = slotEl.getBoundingClientRect();
+    const x = Math.round(slotRect.left - stageRect.left + (slotRect.width / 2));
+    const y = Math.round(slotRect.top - stageRect.top + (slotRect.height / 2));
+
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        createRockImpactParticles(x + (Math.random() * 12 - 6), y + (Math.random() * 10 - 5), '#facc15');
+      }, i * 60);
+    }
+    createFloatingText(x, y - 20, 'SLOT UNLOCKED! ⛏️', '#facc15');
+  }
+
+  setTimeout(() => {
+    slotEl.classList.remove('slot-unlock-burst');
+  }, 1000);
+}
+
+// Bind to window for cross-module invocations
+if (typeof window !== 'undefined') {
+  window.updateStationDigSlotsUI = updateStationDigSlotsUI;
+  window.updateAllDigSlotsUI = updateAllDigSlotsUI;
+  window.triggerSlotUnlockBurst = triggerSlotUnlockBurst;
 }
 
 /**
@@ -300,73 +385,6 @@ export function showLevelUpBadge(stationId, newLevel, levelsBought = 1) {
  * @param {string} stationId
  * @param {string} [bannerText="MILESTONE REACHED!"]
  */
-export function triggerMilestoneCelebration(stationId, bannerText = 'MILESTONE REACHED!') {
-  if (typeof document === 'undefined') return;
-
-  const stage = document.getElementById('mine-stage');
-  const stationEl = document.getElementById(stationId);
-  if (!stage) return;
-
-  // 1. Spawns the central glowing milestone celebration banner
-  const banner = document.createElement('div');
-  banner.className = 'milestone-celebration-banner';
-  banner.textContent = `🎉 ${bannerText}`;
-
-  if (stationEl) {
-    const stationTop = stationEl.offsetTop;
-    banner.style.top = `${Math.max(50, stationTop - 20)}px`;
-  }
-
-  stage.appendChild(banner);
-
-  const cleanupBanner = () => {
-    if (banner.parentNode) {
-      banner.parentNode.removeChild(banner);
-    }
-  };
-  banner.addEventListener('animationend', cleanupBanner, { once: true });
-  setTimeout(cleanupBanner, 2000);
-
-  // 2. Celebratory sparkles / confetti particles around station rock
-  const rockCoords = getStationRockCoords(stationId);
-  for (let i = 0; i < 4; i++) {
-    setTimeout(() => {
-      createRockImpactParticles(rockCoords.x + (Math.random() * 24 - 12), rockCoords.y + (Math.random() * 20 - 10), '#facc15');
-    }, i * 75);
-  }
-
-  // 3. Spawns upward floating gold text
-  createFloatingText(rockCoords.x, rockCoords.y - 30, bannerText, '#facc15');
-}
-
-// Bind to window for cross-module invocations
-if (typeof window !== 'undefined') {
-  window.triggerMilestoneCelebration = triggerMilestoneCelebration;
-}
-
-/**
- * Updates the milestone progress indicators on all station cards.
- */
-export function updateMilestoneIndicators() {
-  if (typeof document === 'undefined') return;
-
-  for (const station of STATIONS) {
-    const milestoneEl = document.getElementById(`milestone-text-${station.id}`);
-    const milestonePill = document.getElementById(`milestone-${station.id}`);
-    if (milestoneEl) {
-      const progress = getMilestoneProgressInfo(station.level);
-      milestoneEl.textContent = progress.text;
-      if (milestonePill) {
-        if (progress.isMax) {
-          milestonePill.classList.add('milestone-max');
-        } else {
-          milestonePill.classList.remove('milestone-max');
-        }
-      }
-    }
-  }
-}
-
 /**
  * Switches the active viewport section tab.
  * @param {string} viewName
@@ -615,7 +633,7 @@ export function renderMinesList(mines, activeMines, miners, player) {
               ${isMining ? 'Excavating Vein...' : 'Excavation Paused'}
             </span>
             <span class="progress-percentage" id="percent-${mine.id}">
-              ${Math.floor(progressPercent)}%
+              ${Math.floor(progressPercent).toLocaleString()}%
             </span>
           </div>
           <div class="progress-track">
@@ -689,7 +707,7 @@ export function updateMineProgress(mineId, currentDurability, totalDurability) {
   );
 
   cached.fillEl.style.width = `${progressPercent.toFixed(1)}%`;
-  cached.percentEl.textContent = `${Math.floor(progressPercent)}%`;
+  cached.percentEl.textContent = `${Math.floor(progressPercent).toLocaleString()}%`;
 }
 
 /**
@@ -726,11 +744,11 @@ export function renderBackpack(inventory) {
               <span class="ore-name">${ore.name}</span>
               <span class="badge badge-rarity ${rarityClass}">${ore.rarity}</span>
             </div>
-            <span class="ore-pricing">${formatNumber(ore.sellValue)} 🪙 each</span>
+            <span class="ore-pricing">${Math.floor(ore.sellValue).toLocaleString()} 🪙 each</span>
           </div>
         </div>
         <div class="ore-actions">
-          <span class="ore-count-badge">x ${formatNumber(count)}</span>
+          <span class="ore-count-badge">x ${Math.floor(count).toLocaleString()}</span>
           <button
             type="button"
             class="btn-sell-single"
@@ -740,7 +758,7 @@ export function renderBackpack(inventory) {
             data-ore-qty="${count}"
             title="Sell all ${ore.name}"
           >
-            Sell (${formatNumber(count * ore.sellValue)} 🪙)
+            Sell (${Math.floor(count * ore.sellValue).toLocaleString()} 🪙)
           </button>
         </div>
       </div>
@@ -753,11 +771,11 @@ export function renderBackpack(inventory) {
       <div class="summary-row">
         <div class="summary-meta">
           <span class="summary-title">Total Extracted Ores</span>
-          <span class="summary-value" style="color: var(--text-primary);">${formatNumber(totalItemsCount)} units</span>
+          <span class="summary-value" style="color: var(--text-primary);">${Math.floor(totalItemsCount).toLocaleString()} units</span>
         </div>
         <div class="summary-meta" style="text-align: right;">
           <span class="summary-title">Estimated Value</span>
-          <span class="summary-value">${formatNumber(estimatedTotalValue)} 🪙</span>
+          <span class="summary-value">${Math.floor(estimatedTotalValue).toLocaleString()} 🪙</span>
         </div>
       </div>
 
@@ -767,7 +785,7 @@ export function renderBackpack(inventory) {
         data-action="sell-all-ores"
         ${!hasItems ? 'disabled' : ''}
       >
-        <span>🪙 Sell All Ores (+${formatNumber(estimatedTotalValue)} Coins)</span>
+        <span>🪙 Sell All Ores (+${Math.floor(estimatedTotalValue).toLocaleString()} Coins)</span>
       </button>
     </div>
 
@@ -827,8 +845,8 @@ export function renderShop(currentUpgrades, playerCoins) {
             ${isMax
               ? '<span>Max Tier Reached</span>'
               : canAfford
-                ? `<span>Upgrade for ${formatNumber(cost)} 🪙</span>`
-                : `<span>Requires ${formatNumber(cost)} 🪙</span>`
+                ? `<span>Upgrade for ${Math.floor(cost).toLocaleString()} 🪙</span>`
+                : `<span>Requires ${Math.floor(cost).toLocaleString()} 🪙</span>`
             }
           </button>
         </div>
@@ -940,7 +958,7 @@ export function showOfflineProgressModal(summary, onClaim) {
             <span style="color: ${color}; font-size: 1.1rem;">⛏️</span>
             <span class="offline-loot-name">${name}</span>
           </div>
-          <span class="offline-loot-amount">+${formatNumber(count)}</span>
+          <span class="offline-loot-amount">+${Math.floor(count).toLocaleString()}</span>
         </div>
       `;
     }).join('');
@@ -964,7 +982,7 @@ export function showOfflineProgressModal(summary, onClaim) {
           <span style="font-size: 1.1rem;">🪙</span>
           <span class="offline-loot-name">Coins</span>
         </div>
-        <span class="offline-loot-amount">+${formatNumber(summary.totalCoins)}</span>
+        <span class="offline-loot-amount">+${Math.floor(summary.totalCoins).toLocaleString()}</span>
       </div>
 
       <!-- Experience earned -->
@@ -973,7 +991,7 @@ export function showOfflineProgressModal(summary, onClaim) {
           <span style="font-size: 1.1rem;">⚡</span>
           <span class="offline-loot-name">Experience</span>
         </div>
-        <span class="offline-loot-amount" style="color: #60a5fa;">+${formatNumber(summary.totalXp)} XP</span>
+        <span class="offline-loot-amount" style="color: #60a5fa;">+${Math.floor(summary.totalXp).toLocaleString()} XP</span>
       </div>
 
       <!-- Ores gained -->
@@ -996,6 +1014,31 @@ export function showOfflineProgressModal(summary, onClaim) {
 
 
 /**
+ * Opens the Heart of the Mountain (HOTM) Perk Tree modal overlay and renders the grid.
+ */
+export function openHotmModal() {
+  if (typeof document === 'undefined') return;
+  const modal = document.getElementById('modal-hotm');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    renderHotmGrid();
+  }
+}
+
+/**
+ * Closes the Heart of the Mountain (HOTM) Perk Tree modal overlay.
+ */
+export function closeHotmModal() {
+  if (typeof document === 'undefined') return;
+  const modal = document.getElementById('modal-hotm');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+}
+
+/**
  * Attaches delegated top-level event listeners for miner assignments,
  * card actions, tab navigation, inventory selling, and upgrades.
  *
@@ -1008,6 +1051,7 @@ export function showOfflineProgressModal(summary, onClaim) {
  * @param {(upgradeId: string) => void} handlers.onBuyUpgrade
  * @param {(tabName: string) => void} handlers.onSwitchTab
  * @param {() => import('./state.js').MinerInstance[]} handlers.getUnassignedMiners
+ * @param {(perkId: string) => void} [handlers.onUpgradeHotmPerk]
  */
 export function initEventListeners(handlers) {
   eventHandlers = handlers;
@@ -1024,6 +1068,7 @@ export function initEventListeners(handlers) {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeMinerSelectionModal();
+      closeHotmModal();
     }
   });
 
@@ -1042,85 +1087,9 @@ export function initEventListeners(handlers) {
     });
   }
 
-  // Multi-Buy Toggle Mode Bar Handlers
-  const buyModeBar = document.getElementById('buy-mode-bar');
-  if (buyModeBar) {
-    buyModeBar.addEventListener('click', (event) => {
-      const target = /** @type {HTMLElement} */ (event.target);
-      const btn = target.closest('[data-buy-mode]');
-      if (!btn) return;
-      const mode = btn.getAttribute('data-buy-mode');
-      if (mode) {
-        setBuyMode(mode);
-      }
-    });
-  }
-
   // Delegated click handler across #app-container
   const appContainer = document.getElementById('app-container');
   if (!appContainer) return;
-
-  // Rapid Hold-to-Upgrade Engine
-  let holdTimer = null;
-  let holdInterval = null;
-  let activeHoldButton = null;
-  let lastHoldActionTimestamp = 0;
-
-  function stopHoldingUpgrade() {
-    if (holdTimer) {
-      clearTimeout(holdTimer);
-      holdTimer = null;
-    }
-    if (holdInterval) {
-      clearInterval(holdInterval);
-      holdInterval = null;
-    }
-    if (activeHoldButton) {
-      activeHoldButton.classList.remove('holding-purchase');
-      activeHoldButton = null;
-    }
-  }
-
-  function executeHoldUpgrade(stationId) {
-    if (!handlers.onUpgradeStation) return;
-    handlers.onUpgradeStation(stationId, currentBuyMode);
-  }
-
-  // Bind pointerdown for instant response and repeat loop
-  appContainer.addEventListener('pointerdown', (event) => {
-    const target = /** @type {HTMLElement} */ (event.target);
-    const upgradeBtn = target.closest('[data-action="upgrade-station"]');
-    if (!upgradeBtn || upgradeBtn.disabled) return;
-
-    const stationId = upgradeBtn.getAttribute('data-station');
-    if (!stationId) return;
-
-    stopHoldingUpgrade();
-    activeHoldButton = upgradeBtn;
-    upgradeBtn.classList.add('holding-purchase');
-    lastHoldActionTimestamp = Date.now();
-
-    // Execute first upgrade immediately
-    executeHoldUpgrade(stationId);
-
-    // After 300ms hold debounce, repeatedly purchase every 100ms
-    holdTimer = setTimeout(() => {
-      holdInterval = setInterval(() => {
-        if (!activeHoldButton || activeHoldButton.disabled) {
-          stopHoldingUpgrade();
-          return;
-        }
-        executeHoldUpgrade(stationId);
-      }, 100);
-    }, 300);
-  });
-
-  // Release hold on pointer release or cancellation
-  window.addEventListener('pointerup', stopHoldingUpgrade);
-  window.addEventListener('pointercancel', stopHoldingUpgrade);
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopHoldingUpgrade();
-  });
 
   appContainer.addEventListener('click', (event) => {
     const target = /** @type {HTMLElement} */ (event.target);
@@ -1196,13 +1165,9 @@ export function initEventListeners(handlers) {
       }
 
       case 'upgrade-station': {
-        // If pointerdown executed within the last 350ms, avoid double trigger
-        if (Date.now() - lastHoldActionTimestamp < 350) {
-          break;
-        }
         const stationId = actionBtn.getAttribute('data-station');
         if (stationId && handlers.onUpgradeStation) {
-          handlers.onUpgradeStation(stationId, currentBuyMode);
+          handlers.onUpgradeStation(stationId);
         }
         break;
       }
@@ -1218,6 +1183,57 @@ export function initEventListeners(handlers) {
       case 'hire-miner': {
         if (handlers.onHireMiner) {
           handlers.onHireMiner();
+        }
+        break;
+      }
+
+      case 'claim-bounty': {
+        const bountyId = actionBtn.getAttribute('data-bounty-id');
+        if (bountyId && handlers.onClaimBounty) {
+          handlers.onClaimBounty(bountyId);
+        }
+        break;
+      }
+
+      case 'open-hotm-modal': {
+        event.preventDefault();
+        openHotmModal();
+        break;
+      }
+
+      case 'close-hotm-modal': {
+        event.preventDefault();
+        closeHotmModal();
+        break;
+      }
+
+      case 'upgrade-hotm-perk': {
+        const perkId = actionBtn.getAttribute('data-perk');
+        if (perkId && handlers.onUpgradeHotmPerk) {
+          handlers.onUpgradeHotmPerk(perkId);
+        }
+        break;
+      }
+
+      case 'trigger-pickobulus': {
+        if (handlers.onTriggerPickobulus) {
+          handlers.onTriggerPickobulus();
+        }
+        break;
+      }
+
+      case 'hit-goblin': {
+        if (handlers.onHitGoblin) {
+          handlers.onHitGoblin(event);
+        }
+        break;
+      }
+
+      case 'reset-save': {
+        if (typeof confirm === 'undefined' || confirm('Are you sure you want to reset your game save? All progress will be cleared.')) {
+          if (handlers.onResetSave) {
+            handlers.onResetSave();
+          }
         }
         break;
       }
@@ -1251,8 +1267,19 @@ export function initEventListeners(handlers) {
       createRockImpactParticles(coords.x, coords.y, color);
 
       // 4. Spawns floating +1 coin text via Juice system
-      createFloatingText(coords.x, coords.y - 18, `+${formatNumber(1)} 🪙`, '#f5a623');
+      createFloatingText(coords.x, coords.y - 18, `+${Math.floor(1).toLocaleString()} 🪙`, '#f5a623');
+    });
+  }
+
+  // Elevator Descent button
+  const descendBtn = document.getElementById('btn-elevator-descend');
+  if (descendBtn) {
+    descendBtn.addEventListener('click', () => {
+      if (handlers && handlers.onDescendBiome) {
+        handlers.onDescendBiome();
+      }
     });
   }
 }
+
 

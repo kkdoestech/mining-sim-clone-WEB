@@ -6,9 +6,8 @@
 
 import { gameState } from './state.js';
 import { spawnMinerAgent, activeMinerAgents } from './minerFSM.js';
-import { formatNumber } from './utils/format.js';
-
-export { formatNumber };
+import { getGlobalEarningsMultiplier } from './rebirth.js';
+import { onGameEvent } from './commissions.js';
 
 /**
  * @typedef {Object} MiningStation
@@ -29,98 +28,33 @@ export { formatNumber };
  */
 
 /**
- * Milestone progression definitions inspired by Cat Snack Bar.
- * Compounding bonuses reward milestone thresholds with immediate earnings spikes.
- * Level 10: 2x Value Multiplier
- * Level 25: 3x Value Multiplier + 50% Speed Boost (1.5x)
- * Level 50: 5x Value Multiplier
- * Level 100: 10x Value Multiplier
- */
-export const STATION_MILESTONES = [
-  { level: 10, valueMultiplier: 2, speedMultiplier: 1.0, label: '2x Value', banner: 'MILESTONE REACHED! 2x BOOST!' },
-  { level: 25, valueMultiplier: 3, speedMultiplier: 1.5, label: '3x Value + 50% Speed', banner: 'MILESTONE REACHED! 3x VALUE + 50% SPEED BOOST!' },
-  { level: 50, valueMultiplier: 5, speedMultiplier: 1.0, label: '5x Value', banner: 'MILESTONE REACHED! 5x BOOST!' },
-  { level: 100, valueMultiplier: 10, speedMultiplier: 1.0, label: '10x Value', banner: 'MILESTONE REACHED! 10x BOOST!' }
-];
-
-/**
- * Computes compounding milestone value bonuses for a given station level tier.
- * Levels 1-9: 1x
- * Levels 10-24: 2x
- * Levels 25-49: 2 * 3 = 6x
- * Levels 50-99: 6 * 5 = 30x
- * Levels 100+: 30 * 10 = 300x
- * @param {number} level
- * @returns {number}
- */
-export function calculateStationMultiplier(level) {
-  let mult = 1;
-  for (const m of STATION_MILESTONES) {
-    if (level >= m.level) {
-      mult *= m.valueMultiplier;
-    }
-  }
-  return mult;
-}
-
-/**
- * Computes the speed multiplier for an active station (e.g., 50% speed boost at Lv 25+).
+ * Dynamic slot calculation per station based on level:
+ * - Level 1 to 9: 1 Worker Slot
+ * - Level 10 to 24: 2 Worker Slots (Milestone unlock!)
+ * - Level 25+: 3 Worker Slots (Milestone unlock!)
  * @param {MiningStation | number} stationOrLevel
  * @returns {number}
  */
-export function getStationSpeedMultiplier(stationOrLevel) {
+export function getStationSlots(stationOrLevel) {
   const level = typeof stationOrLevel === 'number' ? stationOrLevel : (stationOrLevel?.level || 1);
-  let speed = 1.0;
-  for (const m of STATION_MILESTONES) {
-    if (level >= m.level && m.speedMultiplier > 1.0) {
-      speed *= m.speedMultiplier;
-    }
-  }
-  return speed;
+  if (level >= 25) return 3;
+  if (level >= 10) return 2;
+  return 1;
 }
 
 /**
- * Finds the next upcoming milestone target for a given level.
- * @param {number} level
- * @returns {Object | null}
+ * Returns the sum of available worker slots across all UNLOCKED stations.
+ * Starts at 1, maxes out at 9 when all 3 stations reach Lv 25.
+ * @returns {number}
  */
-export function getNextMilestone(level) {
-  for (const m of STATION_MILESTONES) {
-    if (level < m.level) {
-      return m;
-    }
-  }
-  return null;
-}
-
-/**
- * Formats a concise milestone progress descriptor for station cards.
- * Example: "Lv. 7 / 10 ➔ 2x Boost!"
- * @param {number} level
- * @returns {{ text: string, targetLevel: number, reward: string, isMax: boolean }}
- */
-export function getMilestoneProgressInfo(level) {
-  const next = getNextMilestone(level);
-  if (!next) {
-    return {
-      text: `Lv. ${level} • MAX (300x Boost!)`,
-      targetLevel: 100,
-      reward: 'MAX',
-      isMax: true
-    };
-  }
-  const rewardLabel = next.speedMultiplier > 1.0 ? `${next.valueMultiplier}x + 50% Spd!` : `${next.valueMultiplier}x Boost!`;
-  return {
-    text: `Lv. ${level} / ${next.level} ➔ ${rewardLabel}`,
-    targetLevel: next.level,
-    reward: rewardLabel,
-    isMax: false
-  };
+export function getTotalMaxSlots() {
+  const unlocked = STATIONS.filter(s => s.unlocked || s.isUnlocked);
+  return unlocked.reduce((sum, s) => sum + getStationSlots(s.level), 0);
 }
 
 /**
  * Active collection of progressive mining stations.
- * Baseline durabilities tuned so early worker hits break blocks in 1.5–2.0 seconds.
+ * Baseline durabilities tuned for 11-13 minute Biome progression.
  * @type {MiningStation[]}
  */
 export const STATIONS = [
@@ -132,9 +66,10 @@ export const STATIONS = [
     baseCost: 10,
     unlockCost: 0,
     baseOreValue: 1,
-    maxHP: 20,
-    currentHP: 20,
-    workerSlots: 1,
+    maxHP: 15,
+    currentHP: 15,
+    get workerSlots() { return getStationSlots(this.level); },
+    set workerSlots(v) {},
     level: 1,
     unlocked: true,
     workerSpotX: 180,
@@ -151,12 +86,13 @@ export const STATIONS = [
     key: 'copper_node',
     name: 'Copper Node',
     oreId: 'copper',
-    baseCost: 50,
-    unlockCost: 250,
+    baseCost: 35,
+    unlockCost: 280,
     baseOreValue: 5,
-    maxHP: 40,
-    currentHP: 40,
-    workerSlots: 2,
+    maxHP: 45,
+    currentHP: 45,
+    get workerSlots() { return getStationSlots(this.level); },
+    set workerSlots(v) {},
     level: 1,
     unlocked: false,
     workerSpotX: 180,
@@ -173,12 +109,13 @@ export const STATIONS = [
     key: 'gold_node',
     name: 'Gold Node',
     oreId: 'gold',
-    baseCost: 250,
-    unlockCost: 1500,
-    baseOreValue: 25,
-    maxHP: 75,
-    currentHP: 75,
-    workerSlots: 3,
+    baseCost: 180,
+    unlockCost: 2200,
+    baseOreValue: 24,
+    maxHP: 110,
+    currentHP: 110,
+    get workerSlots() { return getStationSlots(this.level); },
+    set workerSlots(v) {},
     level: 1,
     unlocked: false,
     workerSpotX: 180,
@@ -194,77 +131,25 @@ export const STATIONS = [
 
 /**
  * Calculates the exponential upgrade cost for a station at its current tier.
- * Formula: Math.floor(baseCost * Math.pow(1.14, level))
+ * Formula: Math.floor(baseCost * Math.pow(1.11, level))
  * @param {MiningStation} station
  * @returns {number}
  */
 export function getStationUpgradeCost(station) {
-  return Math.floor(station.baseCost * Math.pow(1.14, station.level));
+  return Math.floor(station.baseCost * Math.pow(1.11, station.level));
 }
 
 /**
- * Calculates cumulative geometric cost to buy n levels for a station at once
- * using the geometric series formula:
- * TotalCost = CurrentCost * ((1 - r^n) / (1 - r)) = CurrentCost * ((r^n - 1) / (r - 1)), with r = 1.14
- *
- * @param {MiningStation} station
- * @param {number} n - Number of levels to purchase
- * @returns {number} Cumulative total cost
- */
-export function calculateCostForNLevels(station, n) {
-  const count = Math.max(0, Math.floor(Number(n) || 0));
-  if (count <= 0) return 0;
-  const currentCost = getStationUpgradeCost(station);
-  if (count === 1) return currentCost;
-  const r = 1.14;
-  const factor = (Math.pow(r, count) - 1) / (r - 1);
-  return Math.floor(currentCost * factor);
-}
-
-/**
- * Calculates the maximum levels the player can afford right now and the total cost.
- * Solves inverse geometric progression:
- * TotalCost <= availableCoins
- *
- * @param {MiningStation} station
- * @param {number} availableCoins
- * @returns {{ levels: number, cost: number }}
- */
-export function calculateMaxAffordableLevels(station, availableCoins) {
-  const coins = Math.max(0, Math.floor(Number(availableCoins) || 0));
-  const currentCost = getStationUpgradeCost(station);
-  if (coins < currentCost) {
-    return { levels: 0, cost: 0 };
-  }
-
-  const r = 1.14;
-  // Analytical approximation from: currentCost * (r^n - 1) / (r - 1) <= coins
-  const rawN = Math.floor(Math.log(1 + (coins * (r - 1)) / currentCost) / Math.log(r));
-  let n = Math.max(1, rawN);
-
-  // Precision boundary checks
-  while (calculateCostForNLevels(station, n + 1) <= coins) {
-    n++;
-  }
-  while (n > 0 && calculateCostForNLevels(station, n) > coins) {
-    n--;
-  }
-
-  const cost = calculateCostForNLevels(station, n);
-  return { levels: n, cost };
-}
-
-/**
- * Calculates the ore sell value scaling exponentially with station level and milestone multipliers.
- * Formula: Math.max(1, Math.round(baseOreValue * Math.pow(1.08, level - 1) * calculateStationMultiplier(level)))
+ * Calculates the ore sell value based on station level.
+ * Formula: Math.max(1, Math.round(station.baseOreValue * station.level))
  * @param {MiningStation} station
  * @returns {number}
  */
 export function getStationOreValue(station) {
-  const milestoneMult = calculateStationMultiplier(station.level);
-  const expGrowth = Math.pow(1.08, Math.max(0, station.level - 1));
-  return Math.max(1, Math.round(station.baseOreValue * expGrowth * milestoneMult));
+  const rebirthMult = getGlobalEarningsMultiplier();
+  return Math.max(1, Math.round(station.baseOreValue * station.level * rebirthMult));
 }
+
 
 /**
  * Finds a station by its DOM element ID or logical key.
@@ -300,7 +185,7 @@ export function unlockStation(stationId) {
 
   const cost = station.unlockCost;
   if (gameState.player.coins < cost) {
-    return { success: false, cost, reason: `Requires ${formatNumber(cost)} coins.` };
+    return { success: false, cost, reason: `Requires ${Math.floor(cost).toLocaleString()} coins.` };
   }
 
   // Deduct coins & mark unlocked
@@ -325,7 +210,7 @@ export function unlockStation(stationId) {
             </div>
             <div class="upgrade-cost-tag">
               <span class="cost-coin-icon">🪙</span>
-              <span class="cost-amount" id="cost-${station.id}">${formatNumber(nextUpgradeCost)}</span>
+              <span class="cost-amount" id="cost-${station.id}">${Math.floor(nextUpgradeCost).toLocaleString()}</span>
             </div>
           </button>
         `;
@@ -337,21 +222,12 @@ export function unlockStation(stationId) {
 }
 
 /**
- * Upgrades a station, deducting coins, incrementing its level tier,
- * and updating the visual badges on the card.
+ * Upgrades a station by one level, deducting coins and updating DOM.
+ *
  * @param {string} stationId
  * @returns {{ success: boolean, station?: MiningStation, newLevel?: number, cost?: number, reason?: string }}
  */
-/**
- * Upgrades a station, deducting coins, incrementing its level tier,
- * and updating the visual badges on the card.
- * Supports multi-buy modes ('1x', '10x', 'MAX').
- *
- * @param {string} stationId
- * @param {string | number} [mode='1x'] - '1x', '10x', 'MAX', or explicit number of levels
- * @returns {{ success: boolean, station?: MiningStation, newLevel?: number, levelsBought?: number, cost?: number, milestone?: Object | null, reason?: string }}
- */
-export function upgradeStation(stationId, mode = '1x') {
+export function upgradeStation(stationId) {
   const station = getStation(stationId);
   if (!station) {
     return { success: false, reason: 'Station not found.' };
@@ -361,68 +237,35 @@ export function upgradeStation(stationId, mode = '1x') {
     return { success: false, reason: 'Station must be unlocked before upgrading.' };
   }
 
-  let levelsToBuy = 1;
-  let cost = 0;
-
-  if (mode === '10x') {
-    levelsToBuy = 10;
-    cost = calculateCostForNLevels(station, 10);
-  } else if (mode === 'MAX') {
-    const maxAffordable = calculateMaxAffordableLevels(station, gameState.player.coins);
-    levelsToBuy = maxAffordable.levels;
-    cost = maxAffordable.cost;
-    if (levelsToBuy <= 0) {
-      return { success: false, cost: getStationUpgradeCost(station), reason: 'Insufficient coins for upgrade.' };
-    }
-  } else {
-    levelsToBuy = typeof mode === 'number' && mode > 0 ? Math.floor(mode) : 1;
-    cost = calculateCostForNLevels(station, levelsToBuy);
-  }
+  const cost = getStationUpgradeCost(station);
 
   if (gameState.player.coins < cost) {
-    return { success: false, cost, reason: `Requires ${formatNumber(cost)} coins.` };
+    return { success: false, cost, reason: `Requires ${Math.floor(cost).toLocaleString()} coins.` };
   }
 
-  // Deduct coins & increment level tier
+  // Deduct coins & increment level
   gameState.player.coins -= cost;
-  const oldLevel = station.level;
-  station.level += levelsToBuy;
-  const newLevel = station.level;
+  station.level += 1;
 
-  // Detect any milestones crossed during multi-level purchase
-  const reachedMilestones = STATION_MILESTONES.filter(m => m.level > oldLevel && m.level <= newLevel);
-  const milestone = reachedMilestones.length > 0 ? reachedMilestones[reachedMilestones.length - 1] : null;
+  // Dispatch King's Bounty event for station upgrades
+  onGameEvent('UPGRADE_STATIONS', { stationId, levelsBought: 1 });
 
   // Update DOM visuals
   if (typeof document !== 'undefined') {
     const badgeEl = document.getElementById(`level-badge-${station.id}`);
     const costEl = document.getElementById(`cost-${station.id}`);
-    const milestoneEl = document.getElementById(`milestone-text-${station.id}`);
-    const milestonePill = document.getElementById(`milestone-${station.id}`);
     const nextCost = getStationUpgradeCost(station);
 
     if (badgeEl) {
       badgeEl.textContent = `Lv. ${station.level}`;
     }
     if (costEl) {
-      costEl.textContent = formatNumber(nextCost);
-    }
-    if (milestoneEl) {
-      const progress = getMilestoneProgressInfo(station.level);
-      milestoneEl.textContent = progress.text;
-      if (milestonePill) {
-        if (progress.isMax) {
-          milestonePill.classList.add('milestone-max');
-        } else {
-          milestonePill.classList.remove('milestone-max');
-        }
-      }
+      costEl.textContent = Math.floor(nextCost).toLocaleString();
     }
 
-    // Trigger celebratory banner if milestone reached
-    if (milestone) {
-      if (typeof window !== 'undefined' && typeof window.triggerMilestoneCelebration === 'function') {
-        window.triggerMilestoneCelebration(station.id, milestone.banner);
+    if (typeof window !== 'undefined') {
+      if (typeof window.updateStationDigSlotsUI === 'function') {
+        window.updateStationDigSlotsUI(station);
       }
     }
   }
@@ -431,20 +274,52 @@ export function upgradeStation(stationId, mode = '1x') {
     success: true,
     station,
     newLevel: station.level,
-    levelsBought: levelsToBuy,
-    cost,
-    milestone
+    cost
   };
 }
 
 /**
- * Calculates hiring cost for an additional autonomous miner.
- * Scales geometrically: Math.floor(100 * Math.pow(1.4, workerCount - 1))
+ * Calculates maximum worker cap based on the total worker slots of all currently unlocked stations.
+ * Dynamic worktop expansion: Lv 1-9 = 1 slot, Lv 10-24 = 2 slots, Lv 25+ = 3 slots (Max 9 workers total).
  * @returns {number}
  */
-export function getHireMinerCost() {
-  const count = activeMinerAgents.length;
-  return Math.round(100 * Math.pow(1.4, Math.max(0, count - 1)));
+export function getMaxWorkers() {
+  return getTotalMaxSlots();
+}
+
+/**
+ * Calibrated Worker Hiring Costs
+ * Worker 1: Free starter (0)
+ * Worker 2: 60 coins
+ * Worker 3: 320 coins
+ * Worker 4: 1,200 coins
+ * Worker 5: 4,500 coins
+ * Worker 6+: Math.floor(8000 * Math.pow(1.8, count - 5))
+ */
+export const WORKER_HIRE_COSTS = [
+  0,
+  60,
+  320,
+  1200,
+  4500,
+  8000,
+  14400,
+  25920,
+  46656
+];
+
+/**
+ * Calculates hiring cost for an additional autonomous miner.
+ * @param {number} [workerIndex]
+ * @returns {number}
+ */
+export function getHireMinerCost(workerIndex = activeMinerAgents.length) {
+  const count = typeof workerIndex === 'number' ? workerIndex : activeMinerAgents.length;
+  const baseList = [0, 60, 320, 1200, 4500];
+  if (count < baseList.length) {
+    return baseList[count];
+  }
+  return Math.floor(8000 * Math.pow(1.8, count - 5));
 }
 
 /**
@@ -452,6 +327,14 @@ export function getHireMinerCost() {
  * @returns {{ success: boolean, cost?: number, miner?: any, reason?: string }}
  */
 export function hireExtraMiner() {
+  const maxWorkers = getTotalMaxSlots();
+  if (activeMinerAgents.length >= maxWorkers) {
+    return {
+      success: false,
+      reason: 'Slots Full (Reach Lv 10/25)'
+    };
+  }
+
   const cost = getHireMinerCost();
   if (gameState.player.coins < cost) {
     return { success: false, cost, reason: `Requires ${formatNumber(cost)} coins to recruit worker.` };
@@ -470,9 +353,9 @@ export function hireExtraMiner() {
     id: `worker_${Date.now()}`,
     name,
     avatar,
-    miningPower: 14 + (index * 3),
-    moveSpeed: 220 + (index * 10),
-    backpackCapacity: 4 + (index % 3),
+    miningPower: 10 + (index * 2),
+    moveSpeed: 90,
+    backpackCapacity: 4,
     startX: 75,
     startY: 45
   });
@@ -520,7 +403,7 @@ export function syncStationsDOM() {
             </div>
             <div class="upgrade-cost-tag">
               <span class="cost-coin-icon">🪙</span>
-              <span class="cost-amount" id="cost-${station.id}">${formatNumber(nextCost)}</span>
+              <span class="cost-amount" id="cost-${station.id}">${Math.floor(nextCost).toLocaleString()}</span>
             </div>
           </button>
         `;
@@ -528,21 +411,6 @@ export function syncStationsDOM() {
     } else {
       el.classList.add('station-locked');
       el.classList.remove('station-unlocked');
-    }
-
-    // Update milestone indicator text & max styling
-    const milestoneEl = document.getElementById(`milestone-text-${station.id}`);
-    const milestonePill = document.getElementById(`milestone-${station.id}`);
-    if (milestoneEl) {
-      const progress = getMilestoneProgressInfo(station.level);
-      milestoneEl.textContent = progress.text;
-      if (milestonePill) {
-        if (progress.isMax) {
-          milestonePill.classList.add('milestone-max');
-        } else {
-          milestonePill.classList.remove('milestone-max');
-        }
-      }
     }
 
     // Update HP bar & text
@@ -554,6 +422,11 @@ export function syncStationsDOM() {
     }
     if (textEl) {
       textEl.textContent = `${Math.ceil(station.currentHP)}/${station.maxHP} HP`;
+    }
+
+    // Refresh expandable dig slots UI
+    if (typeof window !== 'undefined' && typeof window.updateStationDigSlotsUI === 'function') {
+      window.updateStationDigSlotsUI(station);
     }
   }
 }

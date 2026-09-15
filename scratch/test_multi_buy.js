@@ -21,8 +21,8 @@ assert.strictEqual(calculateCostForNLevels(dirt, 1), cost1, '1 level cost must e
 assert.strictEqual(calculateCostForNLevels(dirt, 0), 0, '0 levels cost must be 0');
 assert.strictEqual(calculateCostForNLevels(dirt, -5), 0, 'Negative levels cost must be 0');
 
-// 10 levels cumulative cost: currentCost * (1.14^10 - 1) / 0.14
-const expected10 = Math.floor(cost1 * (Math.pow(1.14, 10) - 1) / 0.14);
+// 10 levels cumulative cost: currentCost * (1.11^10 - 1) / 0.11
+const expected10 = Math.floor(cost1 * (Math.pow(1.11, 10) - 1) / 0.11);
 const actual10 = calculateCostForNLevels(dirt, 10);
 assert.strictEqual(actual10, expected10, `Expected 10 levels cost ${expected10}, got ${actual10}`);
 assert.ok(actual10 > cost1 * 10, 'Geometric cost for 10 levels must exceed linear 10x');
@@ -80,13 +80,14 @@ console.log('✓ upgradeStation MAX mode verified');
 console.log('--- TEST 5: Milestone Detection on Large Level Jump ---');
 dirt.level = 20;
 gameState.player.coins = 1000000;
-// Buying 10 levels from Lv 20 -> Lv 30 crosses Lv 25 milestone (3x + 50% Speed)
+// Buying 10 levels from Lv 20 -> Lv 30 crosses Lv 25 milestone (5x Value)
 const upMilestoneJump = upgradeStation('station-1', '10x');
 assert.ok(upMilestoneJump.success);
 assert.strictEqual(dirt.level, 30);
 assert.ok(upMilestoneJump.milestone, 'Must detect Lv 25 milestone during jump');
 assert.strictEqual(upMilestoneJump.milestone.level, 25);
-assert.strictEqual(upMilestoneJump.milestone.speedMultiplier, 1.5);
+assert.strictEqual(upMilestoneJump.milestone.valueMultiplier, 4);
+assert.strictEqual(upMilestoneJump.milestone.speedMultiplier, 1.0);
 console.log('✓ Multi-level milestone detection verified');
 
 console.log('--- TEST 6: Buy Mode State in UI Module ---');
@@ -102,4 +103,3 @@ assert.strictEqual(getBuyMode(), '1x');
 console.log('✓ Buy mode state transitions verified');
 
 console.log('\n🎉 ALL MULTI-BUY TESTS PASSED SUCCESSFULLY!');
-

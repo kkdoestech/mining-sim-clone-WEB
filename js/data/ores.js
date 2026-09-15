@@ -60,7 +60,7 @@ export const ORES = deepFreeze([
     id: 'copper',
     name: 'Copper',
     rarity: 'Common',
-    sellValue: 8,
+    sellValue: 5,
     hardness: 4,
     colorHex: '#d97706'
   },
@@ -76,7 +76,7 @@ export const ORES = deepFreeze([
     id: 'gold',
     name: 'Gold',
     rarity: 'Epic',
-    sellValue: 60,
+    sellValue: 24,
     hardness: 15,
     colorHex: '#f59e0b'
   },

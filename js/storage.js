@@ -15,8 +15,12 @@ import {
 } from './state.js';
 import { STATIONS, getStation } from './stations.js';
 import { activeMinerAgents } from './minerFSM.js';
+import { rebirthState, initRebirthState } from './rebirth.js';
+import { getActiveBounties, initBounties } from './commissions.js';
+import { getHotmSaveData, initHotmState } from './hotm.js';
 
 export const STORAGE_KEY = 'MINING_SIM_SAVE';
+export const SAVE_VERSION = '2.2.0';
 export const MAX_OFFLINE_SECONDS = 8 * 60 * 60; // 8 hours maximum offline progress cap
 const MIN_OFFLINE_THRESHOLD_SECONDS = 10; // Minimum duration to trigger offline progress dialog
 
@@ -51,6 +55,7 @@ export function saveGame(state) {
     const storage = getStorage();
     const payload = {
       version: 1,
+      saveVersion: SAVE_VERSION,
       lastSavedTimestamp: Date.now(),
       player: state.player,
       upgrades: state.upgrades,
@@ -63,7 +68,13 @@ export function saveGame(state) {
         unlocked: s.unlocked,
         currentHP: s.currentHP
       })),
-      workerCount: activeMinerAgents.length
+      workerCount: activeMinerAgents.length,
+      rebirth: {
+        rebirthCount: rebirthState.rebirthCount,
+        depthTier: rebirthState.depthTier
+      },
+      bounties: getActiveBounties(),
+      hotm: getHotmSaveData()
     };
 
     storage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -91,6 +102,12 @@ export function loadGame() {
       return { success: false, lastSavedTimestamp: null, saveFound: false };
     }
 
+    // Version migration: if save is from an older version, wipe stale testing save
+    if (data.saveVersion !== SAVE_VERSION) {
+      storage.removeItem(STORAGE_KEY);
+      return { success: false, lastSavedTimestamp: null, saveFound: false };
+    }
+
     // 1. Validate & populate player
     if (data.player && typeof data.player === 'object') {
       gameState.player.name = data.player.name || 'MinerGM';
@@ -99,6 +116,7 @@ export function loadGame() {
       gameState.player.xpNeeded = Math.max(50, Number(data.player.xpNeeded) || 100);
       gameState.player.coins = Math.max(0, Number(data.player.coins) || 0);
       gameState.player.gems = Math.max(0, Number(data.player.gems) || 0);
+      gameState.player.powder = Math.max(0, Number(data.player.powder) || 0);
     }
 
     // 2. Validate & populate upgrades
@@ -119,10 +137,15 @@ export function loadGame() {
       }));
     }
 
-    // 4. Validate & populate inventory
+    // 4. Validate & populate inventory (clamped to maxStorage cap)
     if (data.inventory && typeof data.inventory === 'object') {
+      const maxStore = data.maxStorage || gameState.maxStorage || 20;
+      let totalLoaded = 0;
       ORES.forEach(ore => {
-        gameState.inventory[ore.id] = Math.max(0, Number(data.inventory[ore.id]) || 0);
+        const count = Math.max(0, Number(data.inventory[ore.id]) || 0);
+        const allowed = Math.max(0, Math.min(count, maxStore - totalLoaded));
+        gameState.inventory[ore.id] = allowed;
+        totalLoaded += allowed;
       });
     }
 
@@ -164,11 +187,32 @@ export function loadGame() {
       });
     }
 
+    // 7. Validate & populate rebirth state
+    if (data.rebirth && typeof data.rebirth === 'object') {
+      initRebirthState(data.rebirth);
+    } else {
+      initRebirthState({ rebirthCount: 0, depthTier: 1 });
+    }
+
+    // 8. Validate & populate commissions / bounties
+    if (Array.isArray(data.bounties) && data.bounties.length > 0) {
+      initBounties(data.bounties);
+    } else {
+      initBounties();
+    }
+
+    // 9. Validate & populate Heart of the Mountain (HOTM) perks
+    if (data.hotm && typeof data.hotm === 'object') {
+      initHotmState(data.hotm);
+    } else {
+      initHotmState({});
+    }
+
     return {
       success: true,
       lastSavedTimestamp: Number(data.lastSavedTimestamp) || null,
       saveFound: true,
-      workerCount: Math.max(2, Number(data.workerCount) || 2)
+      workerCount: Math.max(1, Number(data.workerCount) || 1)
     };
   } catch (err) {
     console.error('Failed to parse saved game data:', err);
@@ -334,5 +378,16 @@ export function setupAutoSave(getState, intervalMs = 10000) {
       window.removeEventListener('beforeunload', onBeforeUnload);
     }
   };
+}
+
+/**
+ * Hard resets the saved game state, wiping localStorage and refreshing the window.
+ */
+export function resetSave() {
+  const storage = getStorage();
+  storage.removeItem(STORAGE_KEY);
+  if (typeof window !== 'undefined' && window.location) {
+    window.location.reload();
+  }
 }
 

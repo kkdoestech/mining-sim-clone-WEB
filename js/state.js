@@ -28,7 +28,8 @@ export const gameState = {
     xp: 0,
     xpNeeded: 100,
     coins: 100,
-    gems: 5
+    gems: 5,
+    powder: 0
   },
 
   /**
@@ -39,6 +40,16 @@ export const gameState = {
   addCoins(amount) {
     this.player.coins += Math.max(0, amount);
     return this.player.coins;
+  },
+
+  /**
+   * Adds Mithril Powder (🟣) to the player's balance and returns the new total.
+   * @param {number} amount
+   * @returns {number}
+   */
+  addPowder(amount) {
+    this.player.powder = (this.player.powder || 0) + Math.max(0, amount);
+    return this.player.powder;
   },
 
 
@@ -62,6 +73,12 @@ export const gameState = {
     diamond: 0
   },
 
+  /** Maximum surface vault/cart storage capacity */
+  get maxStorage() {
+    return getMaxStorage();
+  },
+  set maxStorage(v) {},
+
   /**
    * @type {Record<string, {
    *   isMining: boolean,
@@ -72,6 +89,75 @@ export const gameState = {
    */
   activeMines: {}
 };
+
+let activeMinerCountGetter = null;
+
+/**
+ * Registers an external provider function to query the live active tycoon workers count.
+ * @param {() => number} getter
+ */
+export function setMinerCountProvider(getter) {
+  activeMinerCountGetter = getter;
+}
+
+/**
+ * Calculates total count of stored ores in player inventory.
+ * @returns {number}
+ */
+export function getTotalStoredOres() {
+  if (!gameState.inventory) return 0;
+  return Object.values(gameState.inventory).reduce((a, b) => a + b, 0);
+}
+
+/**
+ * Returns maximum storage capacity for surface cart / vault.
+ * Formula: maxStorage = 20 + (minerCount * 15)
+ * @param {number} [forcedMinerCount]
+ * @returns {number}
+ */
+export function getMaxStorage(forcedMinerCount) {
+  let count = 0;
+  if (typeof forcedMinerCount === 'number') {
+    count = forcedMinerCount;
+  } else if (typeof activeMinerCountGetter === 'function') {
+    count = activeMinerCountGetter();
+  } else if (gameState.miners && gameState.miners.length > 0) {
+    count = gameState.miners.length;
+  } else {
+    count = 1;
+  }
+  return 20 + (count * 15);
+}
+
+/**
+ * Checks whether surface vault/cart storage has reached capacity.
+ * @returns {boolean}
+ */
+export function isSurfaceStorageFull() {
+  return getTotalStoredOres() >= getMaxStorage();
+}
+
+/**
+ * Deposits ores into the surface vault/cart storage without exceeding maxStorage.
+ * @param {string} oreId
+ * @param {number} [count=1]
+ * @returns {number} Count of ores actually deposited
+ */
+export function addOreToInventory(oreId, count = 1) {
+  const currentTotal = getTotalStoredOres();
+  const maxCap = getMaxStorage();
+  const spaceLeft = Math.max(0, maxCap - currentTotal);
+  const actualAdded = Math.min(spaceLeft, Math.max(0, count));
+
+  if (actualAdded > 0) {
+    if (gameState.inventory[oreId] !== undefined) {
+      gameState.inventory[oreId] += actualAdded;
+    } else {
+      gameState.inventory[oreId] = actualAdded;
+    }
+  }
+  return actualAdded;
+}
 
 /**
  * Computes the effective player level threshold for unlocking a mine,
@@ -313,9 +399,7 @@ export function grantMiningReward(oreId, count, xpAmount, coinBonus = 0) {
   const doubleChance = oreMultDef ? oreMultDef.effectFormula(oreMultLevel) : 0;
   const finalCount = Math.random() < doubleChance ? count * 2 : count;
 
-  if (gameState.inventory[oreId] !== undefined) {
-    gameState.inventory[oreId] += finalCount;
-  }
+  addOreToInventory(oreId, finalCount);
 
   const ore = getOreDefinition(oreId);
   const coinYield = (ore ? ore.sellValue : 1) * finalCount + coinBonus;

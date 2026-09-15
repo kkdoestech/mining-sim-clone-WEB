@@ -28,7 +28,8 @@ import {
   saveGame,
   loadGame,
   calculateOfflineProgress,
-  setupAutoSave
+  setupAutoSave,
+  resetSave
 } from './storage.js';
 import {
   updateHeader,
@@ -40,9 +41,6 @@ import {
   updateMineProgress,
   showOfflineProgressModal,
   showLevelUpBadge,
-  triggerMilestoneCelebration,
-  updateStationButtonsState,
-  getBuyMode,
   initEventListeners
 } from './ui.js';
 import {
@@ -55,7 +53,11 @@ import {
   initTycoonWorkers
 } from './minerFSM.js';
 import { createFloatingText } from './juice.js';
-import { formatNumber } from './utils/format.js';
+import { performRebirth, applyBiomeTheme, rebirthState } from './rebirth.js';
+import { initBounties, claimBounty, renderBountiesBar } from './commissions.js';
+import { renderHotmGrid, upgradePerk } from './hotm.js';
+import { triggerPickobulus } from './abilities.js';
+import { onClickGoblinThief } from './events.js';
 
 
 /**
@@ -80,17 +82,19 @@ function initApp() {
   renderMinesList(MINES, gameState.activeMines, gameState.miners, gameState.player);
   renderBackpack(gameState.inventory);
   renderShop(gameState.upgrades, gameState.player.coins);
+  applyBiomeTheme(rebirthState.depthTier);
   syncStationsDOM();
+  renderBountiesBar();
+  renderHotmGrid();
 
   // 3. Initialize autonomous 2D Tycoon Miners on the Quarry Stage
-  initTycoonWorkers(loadResult.workerCount || 2);
-  updateStationButtonsState(gameState.player.coins);
+  initTycoonWorkers(loadResult.workerCount || 1);
 
   // 4. Display welcoming modal if offline progress was made
   if (offlineProgress) {
     showOfflineProgressModal(offlineProgress, () => {
       // On Claim: animate coins, update views and immediately save
-      triggerCoinFloatAnimation(formatNumber(offlineProgress.totalCoins));
+      triggerCoinFloatAnimation(Math.floor(offlineProgress.totalCoins).toLocaleString());
       updateHeader(gameState.player);
       renderBackpack(gameState.inventory);
       renderMinesList(MINES, gameState.activeMines, gameState.miners, gameState.player);
@@ -159,15 +163,11 @@ function initApp() {
       }
     },
 
-    onUpgradeStation: (stationId, mode) => {
-      const activeMode = mode || getBuyMode();
-      const res = upgradeStation(stationId, activeMode);
+    onUpgradeStation: (stationId) => {
+      const res = upgradeStation(stationId);
       if (res.success) {
-        showLevelUpBadge(stationId, res.newLevel, res.levelsBought);
-        if (res.milestone) {
-          triggerMilestoneCelebration(stationId, res.milestone.banner);
-        }
-        triggerCoinFloatAnimation(`-${formatNumber(res.cost)} 🪙`);
+        showLevelUpBadge(stationId, res.newLevel);
+        triggerCoinFloatAnimation(`-${Math.floor(res.cost).toLocaleString()} 🪙`);
         updateHeader(gameState.player);
         saveGame(gameState);
       }
@@ -177,7 +177,7 @@ function initApp() {
       const res = unlockStation(stationId);
       if (res.success) {
         showLevelUpBadge(stationId, 1);
-        triggerCoinFloatAnimation(`-${formatNumber(res.cost)} 🪙`);
+        triggerCoinFloatAnimation(`-${Math.floor(res.cost).toLocaleString()} 🪙`);
         updateHeader(gameState.player);
         saveGame(gameState);
       }
@@ -186,7 +186,7 @@ function initApp() {
     onHireMiner: () => {
       const res = hireExtraMiner();
       if (res.success) {
-        triggerCoinFloatAnimation(`-${formatNumber(res.cost)} 🪙`);
+        triggerCoinFloatAnimation(`-${Math.floor(res.cost).toLocaleString()} 🪙`);
         createFloatingText(75, 50, '+1 Worker 👷‍♂️', '#10b981');
         updateHeader(gameState.player);
         saveGame(gameState);
@@ -195,6 +195,51 @@ function initApp() {
 
     onSwitchTab: (tabName) => {
       switchView(tabName, gameState);
+    },
+
+    onDescendBiome: () => {
+      performRebirth().then(res => {
+        if (res.success) {
+          updateHeader(gameState.player);
+          renderBackpack(gameState.inventory);
+          saveGame(gameState);
+        }
+      });
+    },
+
+    onClaimBounty: (bountyId) => {
+      const res = claimBounty(bountyId);
+      if (res.success) {
+        updateHeader(gameState.player);
+        saveGame(gameState);
+      }
+    },
+
+    onUpgradeHotmPerk: (perkId) => {
+      const res = upgradePerk(perkId);
+      if (res.success) {
+        updateHeader(gameState.player);
+        saveGame(gameState);
+      }
+    },
+
+    onTriggerPickobulus: () => {
+      const res = triggerPickobulus();
+      if (res.success) {
+        updateHeader(gameState.player);
+        saveGame(gameState);
+      }
+    },
+
+    onHitGoblin: (event) => {
+      const res = onClickGoblinThief(event);
+      if (res.success) {
+        updateHeader(gameState.player);
+      }
+    },
+
+    onResetSave: () => {
+      resetSave();
     },
 
     getUnassignedMiners: () => {

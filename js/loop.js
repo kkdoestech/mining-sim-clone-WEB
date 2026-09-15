@@ -7,6 +7,8 @@
 import { MINES } from './data/mines.js';
 import { gameState, calculateMinePower, grantMiningReward } from './state.js';
 import { updateAllMinerAgents } from './minerFSM.js';
+import { updateAbilities } from './abilities.js';
+import { updateEvents } from './events.js';
 
 let isRunning = false;
 let lastTimestamp = 0;
@@ -48,8 +50,10 @@ function tick(timestamp, callbacks) {
   let playerStateDirty = false;
   const prevCoins = gameState.player.coins;
 
-  // 1. Update autonomous Tycoon Miner Agents (FSM) every frame
+  // 1. Update autonomous Tycoon Miner Agents (FSM), Active Abilities, and Flash Events every frame
   updateAllMinerAgents(dt);
+  updateAbilities(dt);
+  updateEvents(dt);
 
   if (gameState.player.coins !== prevCoins) {
     playerStateDirty = true;
